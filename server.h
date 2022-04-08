@@ -14,13 +14,17 @@
 #include <list>
 #include <utility>
 #include <poll.h>
+#include <netinet/in.h>
 //#include <utility>
 
 using namespace std;
 
 class Server {
 private:
-    list<string> TCPPortList;
+    list<uint16_t> TCPPortList;
+    uint16_t UDPPort;
+    list<uint16_t> backendPortList;
+
     static void sigchld_handler(int s)
     {
         int saved_errno = errno;
@@ -28,44 +32,67 @@ private:
         errno = saved_errno;
     }
 
-    static int TCPListener(const string& serverPort) {
+    static int TCPListener(uint16_t serverPort) {
         int TCPSocket;
-        addrinfo hints{}, *serverInfo;
+        sockaddr_in serverAddress{};
+        memset(&serverAddress, 0, sizeof(serverAddress));
         int yes = 1;
-        memset(&hints, 0, sizeof(hints));
-        hints.ai_family = AF_INET;
-        hints.ai_socktype = SOCK_STREAM;
-        assert(getaddrinfo("localhost", serverPort.c_str(), &hints, &serverInfo) == 0);
-        for (addrinfo *ai = serverInfo; ai != nullptr; ai = ai->ai_next) {
-            TCPSocket = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
-            if (TCPSocket == -1) continue;
-            assert(setsockopt(TCPSocket, SOL_SOCKET, SO_REUSEADDR, &yes,sizeof(int)) != -1);
-            int r = bind(TCPSocket, ai->ai_addr, ai->ai_addrlen);
-            if (r == -1) {
-                close(TCPSocket);
-                continue;
-            }
-            assert(listen(TCPSocket, 8) != -1);
-            struct sigaction sigAction{};
-            sigAction.sa_handler = sigchld_handler; // reap all dead processes
-            sigemptyset(&sigAction.sa_mask);
-            sigAction.sa_flags = SA_RESTART;
-            assert(sigaction(SIGCHLD, &sigAction, nullptr) != -1);
-            return TCPSocket;
+        serverAddress.sin_family = AF_INET;
+        serverAddress.sin_port = htons(serverPort);
+        serverAddress.sin_addr.s_addr = inet_addr("127.0.0.1");
+        TCPSocket = socket(serverAddress.sin_family,SOCK_STREAM,0);
+        assert(TCPSocket != -1);
+        assert(setsockopt(TCPSocket, SOL_SOCKET, SO_REUSEADDR, &yes,sizeof(int)) != -1);
+        auto* socketAddress = (sockaddr*) &serverAddress;
+        int r = bind(TCPSocket, socketAddress, sizeof(serverAddress));
+        if (r == -1) {
+            close(TCPSocket);
+            assert(false);
         }
-        return -1;
+        assert(listen(TCPSocket, 8) != -1);
+        struct sigaction sigAction{};
+        sigAction.sa_handler = sigchld_handler; // reap all dead processes
+        sigemptyset(&sigAction.sa_mask);
+        sigAction.sa_flags = SA_RESTART;
+        assert(sigaction(SIGCHLD, &sigAction, nullptr) != -1);
+        return TCPSocket;
+    }
+
+    static int UDPSender(uint16_t serverPort) {
+        int UDPSocket = 0;
+        sockaddr_in serverAddress{};
+        memset(&serverAddress, 0, sizeof(serverAddress));
+        serverAddress.sin_family = AF_INET;
+        serverAddress.sin_port = htons(serverPort);
+        serverAddress.sin_addr.s_addr = inet_addr("127.0.0.1");
+        UDPSocket = socket(serverAddress.sin_family, SOCK_DGRAM, 0);
+        assert(UDPSocket != -1);
+        auto* socketAddress = (sockaddr*) &serverAddress;
+        assert(bind(UDPSocket, socketAddress, sizeof(serverAddress)) != -1);
+        return UDPSocket;
     }
 
 
 public:
-    explicit Server(list<string> TCPPortList) : TCPPortList(std::move(TCPPortList)) {}
+    explicit Server(list<uint16_t> TCPPortList,
+                    uint16_t UDPPort,
+                    list<uint16_t> backendPortList) :
+                    TCPPortList(std::move(TCPPortList)),
+                    UDPPort(UDPPort),
+                    backendPortList(std::move(backendPortList)) {}
+
     void start() {
         pollfd polls[TCPPortList.size()];
+        int UDPSocket = UDPSender(UDPPort);
+        list<sockaddr_in> backendAddress;
         int TCPPortCount = 0;
-        for (const string& port : TCPPortList) {
+        for (uint16_t port : TCPPortList) {
             polls[TCPPortCount].fd = TCPListener(port);
             polls[TCPPortCount].events = POLLIN;
             ++TCPPortCount;
+        }
+        for (uint16_t port : backendPortList) {
+//            backendAddress.emplace_back()
         }
         while (true) {
             assert(poll(polls, TCPPortCount, -1) != -1);

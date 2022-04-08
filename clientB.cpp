@@ -5,7 +5,7 @@ using namespace std;
 
 int main(int argc, char** argv)
 {
-    Client client("B", "a", "26062");
+    Client client("B", "a", 26062);
     client.test();
     return 0;
 }
