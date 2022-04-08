@@ -28,7 +28,7 @@ private:
     static void sigchld_handler(int s)
     {
         int saved_errno = errno;
-        while(waitpid(-1, NULL, WNOHANG) > 0);
+        while(waitpid(-1, nullptr, WNOHANG) > 0);
         errno = saved_errno;
     }
 
@@ -84,7 +84,7 @@ public:
     void start() {
         pollfd polls[TCPPortList.size()];
         int UDPSocket = UDPSender(UDPPort);
-        list<sockaddr_in> backendAddress;
+        list<sockaddr_in> backendAddressList;
         int TCPPortCount = 0;
         for (uint16_t port : TCPPortList) {
             polls[TCPPortCount].fd = TCPListener(port);
@@ -92,7 +92,12 @@ public:
             ++TCPPortCount;
         }
         for (uint16_t port : backendPortList) {
-//            backendAddress.emplace_back()
+            sockaddr_in backendAddress{};
+            memset(&backendAddress, 0, sizeof(backendAddress));
+            backendAddress.sin_family = AF_INET;
+            backendAddress.sin_port = htons(port);
+            backendAddress.sin_addr.s_addr = inet_addr("127.0.0.1");
+            backendAddressList.emplace_back(backendAddress);
         }
         while (true) {
             assert(poll(polls, TCPPortCount, -1) != -1);
@@ -100,14 +105,25 @@ public:
                 if (polls[i].revents & POLLIN) {
                     sockaddr_storage clientAddressStorage{};
                     auto * clientAddress = (sockaddr*)&clientAddressStorage;
-                    socklen_t addressSize = sizeof(clientAddressStorage);
-                    int TCPSocket = accept(polls[i].fd, clientAddress, &addressSize);
+                    socklen_t clientAddressSize = sizeof(clientAddressStorage);
+                    int TCPSocket = accept(polls[i].fd, clientAddress, &clientAddressSize);
                     assert(TCPSocket != -1);
                     char buffer[127];
                     ssize_t n = recv(TCPSocket, buffer, 127, 0);
-                    cout << "server: " + string(buffer) << i << endl;
+                    strcat(buffer, "server");
+                    for (sockaddr_in backendAddress : backendAddressList) {
+                        auto * address = (sockaddr*)&backendAddress;
+                        n = sendto(UDPSocket, buffer, sizeof(buffer), 0,
+                                   address, sizeof(backendAddress));
+                        assert(n != -1);
+                        sockaddr_storage addressStorage{};
+                        auto * serverAddress = (sockaddr*)&addressStorage;
+                        socklen_t addressSize = sizeof(addressStorage);
+                        n = recvfrom(UDPSocket, buffer, 127 , 0,
+                                     serverAddress, &addressSize);
+                        strcat(buffer, "server");
+                    }
                     assert(n != -1);
-                    buffer[n] = '\0';
                     assert(send(TCPSocket, buffer, sizeof(buffer), 0) != -1);
                     close(TCPSocket);
                 }

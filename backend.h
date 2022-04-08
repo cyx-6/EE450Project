@@ -39,7 +39,8 @@ public:
             ssize_t n = recvfrom(backendSocket, buffer, 127 , 0,
                                  serverAddress, &addressSize);
             assert(n != -1);
-            buffer[n] = '\0';
+//            buffer[n] = '\0';
+            strcat(buffer, "backend");
             assert(sendto(backendSocket, buffer, sizeof(buffer), 0,
                           serverAddress, addressSize) != -1);
         }
