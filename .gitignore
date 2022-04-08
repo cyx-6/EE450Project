@@ -2,7 +2,7 @@ cmake-build-debug/
 .idea/
 CMakeLists.txt
 clientA
-clientA
+clientB
 serverM
 serverA
 serverB
