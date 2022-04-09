@@ -39,7 +39,7 @@ public:
         assert(token == nullptr);
     }
 
-    int encode(char* buffer) {
+    int encode(char* buffer) const {
         string s = to_string(serialID) + "\t" + userName1 + "\t" + userName2 + "\t" +
                 to_string(transferAmount) + "\t" + to_string(nextSerialID);
         strcpy(buffer, s.c_str());

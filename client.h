@@ -14,6 +14,7 @@
 //#include <utility>
 
 #include "operation.h"
+#include "config.h"
 
 using namespace std;
 
@@ -39,7 +40,7 @@ public:
         memset(&serverAddress, 0, sizeof(serverAddress));
         serverAddress.sin_family = AF_INET;
         serverAddress.sin_port = htons(serverPort);
-        serverAddress.sin_addr.s_addr = inet_addr("127.0.0.1");
+        serverAddress.sin_addr.s_addr = inet_addr(Config::LOCALHOST);
         clientSocket = socket(serverAddress.sin_family,SOCK_STREAM,0);
         assert(clientSocket != -1);
         auto* socketAddress = (sockaddr*) &serverAddress;;
@@ -49,7 +50,7 @@ public:
             close(clientSocket);
             assert(false);
         }
-        char buffer[4096];
+        char buffer[Config::BUFFER_LEN];
         Operation operation(argc, argv);
         assert(operation.encode(buffer) == 0);
         assert(send(clientSocket, buffer, sizeof(buffer), 0) != -1);

@@ -39,7 +39,7 @@ public:
         assert(token == nullptr);
     }
 
-    int encode(char* buffer, bool withNextRanking = true) {
+    int encode(char* buffer, bool withNextRanking = true) const {
         string s = to_string(ranking) + "\t" + userName + "\t" +
                 to_string(transactionNumber) + "\t" + to_string(balance) +
                 (withNextRanking ? "\t" + to_string(nextRanking) : "");

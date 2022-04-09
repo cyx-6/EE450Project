@@ -18,6 +18,7 @@
 #include "transaction.h"
 #include "operation.h"
 #include "user.h"
+#include "config.h"
 
 using namespace std;
 
@@ -28,8 +29,16 @@ private:
     unordered_map<string, User> users;
     vector<Transaction> transactions;
 
+    int TXList() {
+        for (const Transaction& t: transactions) {
+            char buffer[Config::BUFFER_LEN];
+            t.encode(buffer);
+        }
+        return 0;
+    }
+
     int checkWallet(const Operation& o) {
-        char buffer[4096];
+        char buffer[Config::BUFFER_LEN];
         string userName1 = o.getUserName1();
         User u(0, userName1, 0, 0);
         if (users.count(userName1)) u.merge(users.at(userName1));
@@ -53,7 +62,7 @@ private:
         v[0].setFirst();
         for (int i = 0; i < n - 1; ++i) v[i].linkNext(v[i + 1]);
         for (int i = 0; i < n; ++i) {
-            char buffer[4096];
+            char buffer[Config::BUFFER_LEN];
             v[i].encode(buffer);
             cout << buffer << endl;
         }
@@ -98,18 +107,18 @@ public:
         memset(&backendAddress, 0, sizeof(backendAddress));
         backendAddress.sin_family = AF_INET;
         backendAddress.sin_port = htons(backendPort);
-        backendAddress.sin_addr.s_addr = inet_addr("127.0.0.1");
+        backendAddress.sin_addr.s_addr = inet_addr(Config::LOCALHOST);
         backendSocket = socket(backendAddress.sin_family, SOCK_DGRAM, 0);
         assert(backendSocket != -1);
         auto* socketAddress = (sockaddr*) &backendAddress;
         assert(bind(backendSocket, socketAddress, sizeof(backendAddress)) != -1);
         cout << "The Server" + backendName + " is up and running using UDP on port " + to_string(backendPort) << "." << endl;
         while (true) {
-            char buffer[127];
+            char buffer[Config::BUFFER_LEN];
             sockaddr_storage serverAddressStorage{};
             auto * serverAddress = (sockaddr*)&serverAddressStorage;
             socklen_t addressSize = sizeof(serverAddressStorage);
-            ssize_t n = recvfrom(backendSocket, buffer, 127 , 0,
+            ssize_t n = recvfrom(backendSocket, buffer, sizeof(buffer), 0,
                                  serverAddress, &addressSize);
             assert(n != -1);
             cout << "The Server" + backendName + " received a request from the Main Server." << endl;

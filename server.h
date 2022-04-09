@@ -20,6 +20,7 @@
 #include "operation.h"
 #include "transaction.h"
 #include "user.h"
+#include "config.h"
 
 using namespace std;
 
@@ -44,7 +45,7 @@ private:
         int yes = 1;
         serverAddress.sin_family = AF_INET;
         serverAddress.sin_port = htons(serverPort);
-        serverAddress.sin_addr.s_addr = inet_addr("127.0.0.1");
+        serverAddress.sin_addr.s_addr = inet_addr(Config::LOCALHOST);
         TCPSocket = socket(serverAddress.sin_family,SOCK_STREAM,0);
         assert(TCPSocket != -1);
         assert(setsockopt(TCPSocket, SOL_SOCKET, SO_REUSEADDR, &yes,sizeof(int)) != -1);
@@ -69,7 +70,7 @@ private:
         memset(&serverAddress, 0, sizeof(serverAddress));
         serverAddress.sin_family = AF_INET;
         serverAddress.sin_port = htons(serverPort);
-        serverAddress.sin_addr.s_addr = inet_addr("127.0.0.1");
+        serverAddress.sin_addr.s_addr = inet_addr(Config::LOCALHOST);
         UDPSocket = socket(serverAddress.sin_family, SOCK_DGRAM, 0);
         assert(UDPSocket != -1);
         auto* socketAddress = (sockaddr*) &serverAddress;
@@ -79,7 +80,7 @@ private:
 
     int getUserInfo(int UDPSocket, const string& userName) {
         for (sockaddr_in backendAddress : backendAddressList) {
-            char buffer[4096];
+            char buffer[Config::BUFFER_LEN];
             auto * address = (sockaddr*)&backendAddress;
             ssize_t n = sendto(UDPSocket, buffer, sizeof(buffer), 0,
                        address, sizeof(backendAddress));
@@ -105,7 +106,7 @@ public:
             memset(&backendAddress, 0, sizeof(backendAddress));
             backendAddress.sin_family = AF_INET;
             backendAddress.sin_port = htons(port);
-            backendAddress.sin_addr.s_addr = inet_addr("127.0.0.1");
+            backendAddress.sin_addr.s_addr = inet_addr(Config::LOCALHOST);
             backendAddressList.emplace_back(backendAddress);
         }
     }
@@ -129,7 +130,7 @@ public:
                     socklen_t clientAddressSize = sizeof(clientAddressStorage);
                     int TCPSocket = accept(polls[i].fd, clientAddress, &clientAddressSize);
                     assert(TCPSocket != -1);
-                    char buffer[4096];
+                    char buffer[Config::BUFFER_LEN];
                     ssize_t n = recv(TCPSocket, buffer, sizeof(buffer), 0);
                     Operation operation(buffer);
                     operation.print();

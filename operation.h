@@ -89,7 +89,7 @@ public:
         return transferAmount;
     }
 
-    int encode(char* buffer) {
+    int encode(char* buffer) const {
         string s;
         switch (type) {
             case NONE:
