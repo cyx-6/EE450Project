@@ -13,14 +13,27 @@
 #include <netinet/in.h>
 //#include <utility>
 
+#include "operation.h"
+
 using namespace std;
 
 class Client {
 private:
-    string clientName, userName;
+    string clientName;
     uint16_t serverPort;
 
-    int connectToServer() {
+
+public:
+    Client(string clientName, uint16_t serverPort) :
+            clientName(std::move(clientName)),
+            serverPort(serverPort) {
+    }
+
+    void checkWallet() {};
+    void TXCoins() {};
+    void TXList() {};
+    void stats() {};
+    int run(int argc, char** argv) {
         int clientSocket;
         sockaddr_in serverAddress{};
         memset(&serverAddress, 0, sizeof(serverAddress));
@@ -31,31 +44,19 @@ private:
         assert(clientSocket != -1);
         auto* socketAddress = (sockaddr*) &serverAddress;;
         int r = connect(clientSocket, socketAddress, sizeof(serverAddress));
+        cout << "The client " + clientName + " is up and running." << endl;
         if (r == -1) {
             close(clientSocket);
             assert(false);
         }
-        char buffer[127] = "test";
+        char buffer[4096];
+        Operation operation(argc, argv);
+        assert(operation.encode(buffer) == 0);
         assert(send(clientSocket, buffer, sizeof(buffer), 0) != -1);
-        assert(recv(clientSocket, buffer, 127, 0) != -1);
+        assert(recv(clientSocket, buffer, sizeof(buffer), 0) != -1);
         cout << "client" + clientName + ": " + string(buffer) << endl;
         close(clientSocket);
         return 0;
-    }
-
-public:
-    Client(string clientName, string userName, uint16_t serverPort) :
-            clientName(std::move(clientName)),
-            userName(std::move(userName)),
-            serverPort(serverPort) {
-    }
-
-    void checkWallet() {};
-    void TXCoins() {};
-    void TXList() {};
-    void stats() {};
-    void test() {
-        connectToServer();
     }
 };
 

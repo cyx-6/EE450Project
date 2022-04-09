@@ -5,7 +5,7 @@ using namespace std;
 
 int main(int argc, char** argv)
 {
-    Client client("A", "a", 25062);
-    client.test();
+    Client client("A", 25062);
+    client.run(argc, argv);
     return 0;
 }

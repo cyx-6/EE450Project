@@ -17,6 +17,10 @@
 #include <netinet/in.h>
 //#include <utility>
 
+#include "operation.h"
+#include "transaction.h"
+#include "user.h"
+
 using namespace std;
 
 class Server {
@@ -24,6 +28,7 @@ private:
     list<uint16_t> TCPPortList;
     uint16_t UDPPort;
     list<uint16_t> backendPortList;
+    list<sockaddr_in> backendAddressList;
 
     static void sigchld_handler(int s)
     {
@@ -72,6 +77,21 @@ private:
         return UDPSocket;
     }
 
+    int getUserInfo(int UDPSocket, const string& userName) {
+        for (sockaddr_in backendAddress : backendAddressList) {
+            char buffer[4096];
+            auto * address = (sockaddr*)&backendAddress;
+            ssize_t n = sendto(UDPSocket, buffer, sizeof(buffer), 0,
+                       address, sizeof(backendAddress));
+            assert(n != -1);
+            sockaddr_storage addressStorage{};
+            auto * serverAddress = (sockaddr*)&addressStorage;
+            socklen_t addressSize = sizeof(addressStorage);
+            n = recvfrom(UDPSocket, buffer, sizeof(buffer) , 0,
+                         serverAddress, &addressSize);
+            strcat(buffer, "server");
+        }
+    }
 
 public:
     explicit Server(list<uint16_t> TCPPortList,
@@ -79,18 +99,7 @@ public:
                     list<uint16_t> backendPortList) :
                     TCPPortList(std::move(TCPPortList)),
                     UDPPort(UDPPort),
-                    backendPortList(std::move(backendPortList)) {}
-
-    void start() {
-        pollfd polls[TCPPortList.size()];
-        int UDPSocket = UDPSender(UDPPort);
-        list<sockaddr_in> backendAddressList;
-        int TCPPortCount = 0;
-        for (uint16_t port : TCPPortList) {
-            polls[TCPPortCount].fd = TCPListener(port);
-            polls[TCPPortCount].events = POLLIN;
-            ++TCPPortCount;
-        }
+                    backendPortList(std::move(backendPortList)) {
         for (uint16_t port : backendPortList) {
             sockaddr_in backendAddress{};
             memset(&backendAddress, 0, sizeof(backendAddress));
@@ -99,6 +108,18 @@ public:
             backendAddress.sin_addr.s_addr = inet_addr("127.0.0.1");
             backendAddressList.emplace_back(backendAddress);
         }
+    }
+
+    void start() {
+        pollfd polls[TCPPortList.size()];
+        int UDPSocket = UDPSender(UDPPort);
+        int TCPPortCount = 0;
+        for (uint16_t port : TCPPortList) {
+            polls[TCPPortCount].fd = TCPListener(port);
+            polls[TCPPortCount].events = POLLIN;
+            ++TCPPortCount;
+        }
+        cout << "The main server is up and running." << endl;
         while (true) {
             assert(poll(polls, TCPPortCount, -1) != -1);
             for (int i = 0; i < TCPPortCount; ++i) {
@@ -108,8 +129,10 @@ public:
                     socklen_t clientAddressSize = sizeof(clientAddressStorage);
                     int TCPSocket = accept(polls[i].fd, clientAddress, &clientAddressSize);
                     assert(TCPSocket != -1);
-                    char buffer[127];
-                    ssize_t n = recv(TCPSocket, buffer, 127, 0);
+                    char buffer[4096];
+                    ssize_t n = recv(TCPSocket, buffer, sizeof(buffer), 0);
+                    Operation operation(buffer);
+                    operation.print();
                     strcat(buffer, "server");
                     for (sockaddr_in backendAddress : backendAddressList) {
                         auto * address = (sockaddr*)&backendAddress;
@@ -119,7 +142,7 @@ public:
                         sockaddr_storage addressStorage{};
                         auto * serverAddress = (sockaddr*)&addressStorage;
                         socklen_t addressSize = sizeof(addressStorage);
-                        n = recvfrom(UDPSocket, buffer, 127 , 0,
+                        n = recvfrom(UDPSocket, buffer, sizeof(buffer) , 0,
                                      serverAddress, &addressSize);
                         strcat(buffer, "server");
                     }
