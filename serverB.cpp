@@ -1,7 +1,7 @@
 #include "backend.h"
 
 int main() {
-    Backend backend("B", 22062);
+    Backend backend("B", "block2.txt", 22062);
     backend.start();
     return 0;
 }

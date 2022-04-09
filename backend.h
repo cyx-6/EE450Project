@@ -10,24 +10,90 @@
 #include <cassert>
 #include <iostream>
 #include <utility>
+#include <unordered_map>
+#include <vector>
+#include <fstream>
+#include <algorithm>
 
 #include "transaction.h"
+#include "operation.h"
+#include "user.h"
 
 using namespace std;
 
 class Backend{
 private:
-    string backendName;
+    string backendName, fileName;
     uint16_t backendPort;
+    unordered_map<string, User> users;
+    vector<Transaction> transactions;
+
+    int checkWallet(const Operation& o) {
+        char buffer[4096];
+        string userName1 = o.getUserName1();
+        User u(0, userName1, 0, 0);
+        if (users.count(userName1)) u.merge(users.at(userName1));
+        u.setFirst();
+        u.encode(buffer);
+        return 0;
+    }
+
+    int TXCoins(const Transaction& t) {
+        unsigned long n = transactions.size();
+        transactions.emplace_back(t);
+        transactions[n].linkNext(transactions[n + 1]);
+        return 0;
+    }
+
+    int stats() {
+        vector<User> v;
+        for (pair<string, User> p : users) v.emplace_back(p.second);
+        sort(v.begin(), v.end(), User::comp);
+        unsigned long n = v.size();
+        v[0].setFirst();
+        for (int i = 0; i < n - 1; ++i) v[i].linkNext(v[i + 1]);
+        for (int i = 0; i < n; ++i) {
+            char buffer[4096];
+            v[i].encode(buffer);
+            cout << buffer << endl;
+        }
+        return 0;
+    }
+
+    int load() {
+        ifstream file(fileName);
+        int n = 0;
+        while (file.peek() != EOF) {
+            string s;
+            getline(file, s);
+            replace(s.begin(), s.end(), ' ', '\t');
+            if (s.empty()) break;
+            Transaction t(s.c_str());
+            transactions.emplace_back(t);
+            transactions[n].linkNext(transactions[n + 1]);
+            string userName1 = t.getUserName1(), userName2 = t.getUserName2();
+            long int transferAmount = t.getTransferAmount();
+            if (!users.count(userName1))
+                users.insert(make_pair(userName1, User(0, userName1, 0, 0)));
+            users.at(userName1).merge(User(0, userName1, 1, -transferAmount));
+            if (!users.count(userName2))
+                users.insert(make_pair(userName2, User(0, userName2, 0, 0)));
+            users.at(userName2).merge(User(0, userName2, 1, transferAmount));
+            ++n;
+        }
+        file.close();
+        stats();
+        return 0;
+    }
 
 public:
-    Backend(string backendName,
-            uint16_t backendPort) :
-            backendName(std::move(backendName)),
-            backendPort(backendPort) {}
+    Backend(string backendName, string fileName, uint16_t backendPort) :
+    backendName(std::move(backendName)), fileName(std::move(fileName)),
+    backendPort(backendPort) {}
 
-    int start() const {
+    int start() {
         int backendSocket = 0;
+        load();
         sockaddr_in backendAddress{};
         memset(&backendAddress, 0, sizeof(backendAddress));
         backendAddress.sin_family = AF_INET;

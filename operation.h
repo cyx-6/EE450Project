@@ -74,6 +74,21 @@ public:
         }
     }
 
+    string getUserName1() const {
+        assert(type != TXLIST);
+        return userName1;
+    }
+
+    string getUserName2() const {
+        assert(type == TXCOINS);
+        return userName2;
+    }
+
+    long int getTransferAmount() {
+        assert(type == TXCOINS);
+        return transferAmount;
+    }
+
     int encode(char* buffer) {
         string s;
         switch (type) {

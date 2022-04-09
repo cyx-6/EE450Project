@@ -17,7 +17,9 @@ public:
                   transactionNumber(transactionNumber),
                   balance(balance), nextRanking(nextRanking) {}
 
-    explicit User(char* s) {
+    explicit User(const char* u) {
+        char s[strlen(u)];
+        strcpy(s, u);
         char* token = strtok(s, "\t");
         assert(token != nullptr);
         ranking = strtol(token, nullptr, 10);
@@ -38,7 +40,8 @@ public:
     }
 
     int encode(char* buffer, bool withNextRanking = true) {
-        string s = to_string(ranking) + "\t" + userName + "\t" + to_string(balance) +
+        string s = to_string(ranking) + "\t" + userName + "\t" +
+                to_string(transactionNumber) + "\t" + to_string(balance) +
                 (withNextRanking ? "\t" + to_string(nextRanking) : "");
         strcpy(buffer, s.c_str());
         return 0;
@@ -48,7 +51,7 @@ public:
         transactionNumber += u.transactionNumber;
         balance += u.balance;
     }
-    
+
     string getUserName() {
         return userName;
     }
@@ -57,7 +60,7 @@ public:
         ranking = 1;
     }
 
-    void link(User &u) {
+    void linkNext(User &u) {
         assert(this != &u);
         u.ranking = nextRanking = ranking + 1;
     }

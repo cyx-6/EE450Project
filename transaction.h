@@ -17,7 +17,9 @@ public:
                 serialID(serialID), userName1(std::move(userName1)), userName2(std::move(userName2)),
                 transferAmount(transferAmount), nextSerialID(nextSerialID) {}
 
-    explicit Transaction(char* s) {
+    explicit Transaction(const char* t) {
+        char s[strlen(t)];
+        strcpy(s, t);
         char* token = strtok(s, "\t");
         assert(token != nullptr);
         serialID = strtol(token, nullptr, 10);
@@ -44,7 +46,19 @@ public:
         return 0;
     }
 
-    void link(const Transaction& t) {
+    string getUserName1() {
+        return userName1;
+    }
+
+    string getUserName2() {
+        return userName2;
+    }
+
+    long int getTransferAmount() const {
+        return transferAmount;
+    }
+
+    void linkNext(const Transaction& t) {
         nextSerialID = t.serialID;
     }
 
