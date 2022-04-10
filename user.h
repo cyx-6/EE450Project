@@ -4,6 +4,8 @@
 #include <string>
 #include <utility>
 
+#include "config.h"
+
 using namespace std;
 
 class User{
@@ -55,6 +57,14 @@ public:
 
     static bool comp(const User& u, const User& v) {
         return u.transactionNumber > v.transactionNumber;
+    }
+
+    bool exist() const {
+        return transactionNumber > 0;
+    }
+
+    bool transferable(const Operation& o) const {
+        return balance + Config::INITIAL_BALANCE >= o.getTransferAmount();
     }
 
 private:

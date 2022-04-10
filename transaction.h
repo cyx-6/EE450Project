@@ -9,10 +9,10 @@ using namespace std;
 
 class Transaction{
 public:
-    explicit Transaction(long int serialID, string userName1, string userName2,
-                long int transferAmount) :
-                serialID(serialID), userName1(std::move(userName1)), userName2(std::move(userName2)),
-                transferAmount(transferAmount) {}
+    explicit Transaction(long int serialID, string userName1,
+                         string userName2, long int transferAmount) :
+                         serialID(serialID), userName1(std::move(userName1)),
+                         userName2(std::move(userName2)), transferAmount(transferAmount) {}
 
     explicit Transaction(const char* t) {
         char s[strlen(t)];

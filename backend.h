@@ -19,6 +19,7 @@
 #include "operation.h"
 #include "user.h"
 #include "config.h"
+#include "utils.h"
 
 using namespace std;
 
@@ -30,33 +31,27 @@ private:
     vector<Transaction> transactions;
 
     int maxSerialID(int backendSocket, sockaddr* serverAddress, socklen_t serverAddressSize) {
-        string s = to_string(transactions.back().getSerialID());
-        assert(sendto(backendSocket, s.c_str(), sizeof(s.c_str()), 0,
-                      serverAddress, serverAddressSize) != -1);
+        UDPSendPrimitive(backendSocket, serverAddress,
+                         serverAddressSize, transactions.back().getSerialID());
         return 0;
     }
 
     int TXList(int backendSocket, sockaddr* serverAddress, socklen_t serverAddressSize) {
-        string s = to_string(transactions.size());
-        assert(sendto(backendSocket, s.c_str(), sizeof(s.c_str()), 0,
-                      serverAddress, serverAddressSize) != -1);
+        UDPSendPrimitive(backendSocket, serverAddress,
+                         serverAddressSize, transactions.size());
         for (const Transaction& t: transactions) {
-            char buffer[Config::BUFFER_LEN];
-            t.encode(buffer);
-            assert(sendto(backendSocket, buffer, Config::BUFFER_SIZE, 0,
-                          serverAddress, serverAddressSize) != -1);
+            UDPSendTransaction(backendSocket, serverAddress,
+                               serverAddressSize, t);
         }
         return 0;
     }
 
     int checkWallet(int backendSocket, sockaddr* serverAddress, socklen_t serverAddressSize, const Operation& o) {
-        char buffer[Config::BUFFER_LEN];
         string userName1 = o.getUserName1();
         User u(0, userName1, 0, 0);
         if (users.count(userName1)) u.merge(users.at(userName1));
-        u.encode(buffer);
-        assert(sendto(backendSocket, buffer, Config::BUFFER_SIZE, 0,
-                      serverAddress, serverAddressSize) != -1);
+        UDPSendUser(backendSocket, serverAddress,
+                    serverAddressSize, u);
         return 0;
     }
 
@@ -70,15 +65,12 @@ private:
         for (pair<string, User> p : users) v.emplace_back(p.second);
         sort(v.begin(), v.end(), User::comp);
         unsigned long n = v.size();
-        string s = to_string(n);
-        assert(sendto(backendSocket, s.c_str(), sizeof(s.c_str()), 0,
-                      serverAddress, serverAddressSize) != -1);
+        UDPSendPrimitive(backendSocket, serverAddress,
+                         serverAddressSize, v.size());
         for (int i = 0; i < n; ++i) {
-            char buffer[Config::BUFFER_LEN];
             v[i].setRanking(i + 1);
-            v[i].encode(buffer);
-            assert(sendto(backendSocket, buffer, Config::BUFFER_SIZE, 0,
-                          serverAddress, serverAddressSize) != -1);
+            UDPSendUser(backendSocket, serverAddress,
+                        serverAddressSize, v[i]);
         }
         return 0;
     }
@@ -127,15 +119,12 @@ public:
         assert(bind(backendSocket, socketAddress, sizeof(backendAddress)) != -1);
         cout << "The Server" + backendName + " is up and running using UDP on port " + to_string(backendPort) << "." << endl;
         while (true) {
-            char buffer[Config::BUFFER_LEN];
             sockaddr_storage serverAddressStorage{};
             auto * serverAddress = (sockaddr*)&serverAddressStorage;
             socklen_t serverAddressSize = sizeof(serverAddressStorage);
-            assert(recvfrom(backendSocket, buffer, Config::BUFFER_SIZE, 0,
-                            serverAddress, &serverAddressSize) != -1);
-            Operation o(buffer);
-            if (o.getType() != Operation::Type::NONE)
-                cout << "The Server" + backendName + " received a request from the Main Server." << endl;
+            Operation o = UDPReceiveOperation(backendSocket, serverAddress,
+                                              &serverAddressSize);
+            cout << "The Server" + backendName + " received a request from the Main Server." << endl;
             switch (o.getType()) {
                 case Operation::Type::NONE:
                     maxSerialID(backendSocket, serverAddress, serverAddressSize);
@@ -155,7 +144,7 @@ public:
                 default:
                     assert(false);
             }
-            if (o.getType() != Operation::Type::NONE)
+            if (o.getType() != Operation::Type::TXCOINS)
                 cout << "The Server" + backendName +  " finished sending the response to the Main Server." << endl;
         }
         return 0;

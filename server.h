@@ -15,12 +15,15 @@
 #include <utility>
 #include <poll.h>
 #include <netinet/in.h>
-//#include <utility>
+#include <utility>
+#include <unordered_map>
+#include <algorithm>
 
 #include "operation.h"
 #include "transaction.h"
 #include "user.h"
 #include "config.h"
+#include "utils.h"
 
 using namespace std;
 
@@ -30,7 +33,7 @@ private:
     uint16_t UDPPort;
     vector<uint16_t> backendPortList;
     vector<sockaddr_in> backendAddressList;
-    long int maxSerialID{};
+    long int maxSerialID;
 
     static void sigchld_handler(int s)
     {
@@ -79,20 +82,82 @@ private:
         return UDPSocket;
     }
 
-    int getUserInfo(int UDPSocket, const string& userName) {
+    User getUserInfo(int UDPSocket, const Operation& o) {
+        User u(0, o.getUserName1(), 0, 0);
         for (sockaddr_in backendAddress : backendAddressList) {
-            char buffer[Config::BUFFER_LEN];
             auto * address = (sockaddr*)&backendAddress;
-            ssize_t n = sendto(UDPSocket, buffer, Config::BUFFER_SIZE, 0,
-                       address, sizeof(backendAddress));
-            assert(n != -1);
-            sockaddr_storage addressStorage{};
-            auto * serverAddress = (sockaddr*)&addressStorage;
-            socklen_t addressSize = sizeof(addressStorage);
-            n = recvfrom(UDPSocket, buffer, Config::BUFFER_SIZE , 0,
-                         serverAddress, &addressSize);
-            strcat(buffer, "server");
+            socklen_t addressSize = sizeof(backendAddress);
+            UDPSendOperation(UDPSocket, address,
+                             addressSize, o);
+            u.merge(UDPReceiveUser(UDPSocket));
         }
+        return u;
+    }
+
+    int TXList(int UDPSocket, const Operation& o) {
+        vector<Transaction> transactions;
+        for (sockaddr_in backendAddress : backendAddressList) {
+            auto * address = (sockaddr*)&backendAddress;
+            socklen_t addressSize = sizeof(backendAddress);
+            UDPSendOperation(UDPSocket, address,
+                             addressSize, o);
+            long int n = UDPReceiveLongInt(UDPSocket);
+            for (int i = 0; i < n; ++i)
+                transactions.emplace_back(UDPReceiveTransaction(UDPSocket));
+        }
+        sort(transactions.begin(), transactions.end(), Transaction::comp);
+        unsigned long n = transactions.size();
+        return 0;
+    }
+
+    int checkWallet(int UDPSocket, const Operation& o) {
+        User u = getUserInfo(UDPSocket, o);
+        if (u.exist()) {
+
+        } else {
+
+        }
+        return 0;
+    }
+
+    int TXCoins(int UDPSocket, const Operation& o) {
+        pair<Operation, Operation> p = o.toSubOperation();
+        User u = getUserInfo(UDPSocket, p.first), v = getUserInfo(UDPSocket, p.second);
+        if (!u.exist()) {
+
+        }
+        if (!v.exist()) {
+
+        }
+        if (u.transferable(o)) {
+
+        } else {
+
+        }
+        return 0;
+    }
+
+    int stats(int UDPSocket, const Operation& o) {
+        unordered_map<string, User> users;
+        for (sockaddr_in backendAddress : backendAddressList) {
+            auto * address = (sockaddr*)&backendAddress;
+            socklen_t addressSize = sizeof(backendAddress);
+            UDPSendOperation(UDPSocket, address,
+                             addressSize, o);
+            long int n = UDPReceiveLongInt(UDPSocket, nullptr, nullptr);
+            for (int i = 0; i < n; ++i) {
+                User u = UDPReceiveUser(UDPSocket, nullptr, nullptr);
+                string userName = u.getUserName();
+                if (!users.count(userName))
+                    users.insert(make_pair(userName, User(0, userName, 0, 0)));
+                users.at(userName).merge(u);
+            }
+        }
+        vector<User> v;
+        for (pair<string, User> p : users) v.emplace_back(p.second);
+        sort(v.begin(), v.end(), User::comp);
+        unsigned long n = v.size();
+        return 0;
     }
 
 public:
@@ -101,7 +166,8 @@ public:
                     const vector<uint16_t>& backendPortList) :
                     TCPPortList(TCPPortList),
                     UDPPort(UDPPort),
-                    backendPortList(backendPortList) {
+                    backendPortList(backendPortList),
+                    maxSerialID(-1) {
         for (uint16_t port : backendPortList) {
             sockaddr_in backendAddress{};
             memset(&backendAddress, 0, sizeof(backendAddress));
@@ -132,7 +198,7 @@ public:
                          nullptr, nullptr) != -1);
             maxSerialID = max(maxSerialID, strtol(buffer, nullptr, 10));
         }
-        cout << maxSerialID << endl;
+//        cout << maxSerialID << endl;
         cout << "The main server is up and running." << endl;
         while (true) {
             assert(poll(polls, TCPPortCount, -1) != -1);
@@ -149,16 +215,16 @@ public:
 //                    operation.print();
                     switch (o.getType()) {
                         case Operation::Type::CHECK_WALLET:
-//                            checkWallet(backendSocket, serverAddress, serverAddressSize, o);
+                            checkWallet(UDPSocket, o);
                             break;
                         case Operation::Type::TXCOINS:
-//                            TXCoins(o);
+                            TXCoins(UDPSocket, o);
                             break;
                         case Operation::Type::TXLIST:
-//                            TXList(backendSocket, serverAddress, serverAddressSize);
+                            TXList(UDPSocket, o);
                             break;
                         case Operation::Type::STATS:
-//                            stats(backendSocket, serverAddress, serverAddressSize);
+                            stats(UDPSocket, o);
                             break;
                         default:
                             assert(false);

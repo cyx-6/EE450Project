@@ -78,7 +78,7 @@ public:
         }
     }
 
-    pair<Operation, Operation> toSubOperation() {
+    pair<Operation, Operation> toSubOperation() const {
         assert(type == TXCOINS);
         Operation u, v;
         u.type = v.type = CHECK_WALLET;
@@ -110,7 +110,7 @@ public:
         return userName2;
     }
 
-    long int getTransferAmount() {
+    long int getTransferAmount() const {
         assert(type == TXCOINS);
         return transferAmount;
     }
