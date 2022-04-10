@@ -1,52 +1,52 @@
 #ifndef BACKEND_H
 #define BACKEND_H
 
-#include <string>
-#include <unistd.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <cstring>
-#include <cassert>
-#include <iostream>
-#include <utility>
-#include <unordered_map>
-#include <vector>
-#include <fstream>
 #include <algorithm>
+#include <arpa/inet.h>
+#include <cassert>
+#include <cstring>
+#include <fstream>
+#include <iostream>
+#include <netdb.h>
+#include <string>
+#include <sys/socket.h>
+#include <unistd.h>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
-#include "transaction.h"
-#include "operation.h"
-#include "user.h"
 #include "config.h"
+#include "operation.h"
+#include "transaction.h"
+#include "user.h"
 #include "utils.h"
 
 using namespace std;
 
-class Backend{
+class Backend {
 private:
     string backendName, fileName;
     uint16_t backendPort;
     unordered_map<string, User> users;
     vector<Transaction> transactions;
 
-    int maxSerialID(int backendSocket, sockaddr* serverAddress, socklen_t serverAddressSize) {
+    int maxSerialID(int backendSocket, sockaddr *serverAddress, socklen_t serverAddressSize) {
         UDPSendPrimitive(backendSocket, serverAddress,
                          serverAddressSize, transactions.back().getSerialID());
         return 0;
     }
 
-    int TXList(int backendSocket, sockaddr* serverAddress, socklen_t serverAddressSize) {
+    int TXList(int backendSocket, sockaddr *serverAddress, socklen_t serverAddressSize) {
         UDPSendPrimitive(backendSocket, serverAddress,
                          serverAddressSize, transactions.size());
-        for (const Transaction& t: transactions) {
+        for (const Transaction &t: transactions) {
             UDPSendTransaction(backendSocket, serverAddress,
                                serverAddressSize, t);
         }
         return 0;
     }
 
-    int checkWallet(int backendSocket, sockaddr* serverAddress, socklen_t serverAddressSize, const Operation& o) {
+    int checkWallet(int backendSocket, sockaddr *serverAddress, socklen_t serverAddressSize, const Operation &o) {
         string userName1 = o.getUserName1();
         User u(0, userName1, 0, 0);
         if (users.count(userName1)) u.merge(users.at(userName1));
@@ -55,14 +55,14 @@ private:
         return 0;
     }
 
-    int TXCoins(const Operation& o) {
+    int TXCoins(const Operation &o) {
         transactions.emplace_back(o.toTransaction());
         return 0;
     }
 
-    int stats(int backendSocket, sockaddr* serverAddress, socklen_t serverAddressSize) {
+    int stats(int backendSocket, sockaddr *serverAddress, socklen_t serverAddressSize) {
         vector<User> v;
-        for (pair<string, User> p : users) v.emplace_back(p.second);
+        for (pair<string, User> p: users) v.emplace_back(p.second);
         sort(v.begin(), v.end(), User::comp);
         unsigned long n = v.size();
         UDPSendPrimitive(backendSocket, serverAddress,
@@ -101,9 +101,8 @@ private:
     }
 
 public:
-    Backend(string backendName, string fileName, uint16_t backendPort) :
-    backendName(std::move(backendName)), fileName(std::move(fileName)),
-    backendPort(backendPort) {}
+    Backend(string backendName, string fileName, uint16_t backendPort) : backendName(std::move(backendName)), fileName(std::move(fileName)),
+                                                                         backendPort(backendPort) {}
 
     int start() {
         int backendSocket = 0;
@@ -115,12 +114,12 @@ public:
         backendAddress.sin_addr.s_addr = inet_addr(Config::LOCALHOST);
         backendSocket = socket(backendAddress.sin_family, SOCK_DGRAM, 0);
         assert(backendSocket != -1);
-        auto* socketAddress = (sockaddr*) &backendAddress;
+        auto *socketAddress = (sockaddr *) &backendAddress;
         assert(bind(backendSocket, socketAddress, sizeof(backendAddress)) != -1);
         cout << "The Server" + backendName + " is up and running using UDP on port " + to_string(backendPort) << "." << endl;
         while (true) {
             sockaddr_storage serverAddressStorage{};
-            auto * serverAddress = (sockaddr*)&serverAddressStorage;
+            auto *serverAddress = (sockaddr *) &serverAddressStorage;
             socklen_t serverAddressSize = sizeof(serverAddressStorage);
             Operation o = UDPReceiveOperation(backendSocket, serverAddress,
                                               &serverAddressSize);
@@ -145,10 +144,10 @@ public:
                     assert(false);
             }
             if (o.getType() != Operation::Type::TXCOINS)
-                cout << "The Server" + backendName +  " finished sending the response to the Main Server." << endl;
+                cout << "The Server" + backendName + " finished sending the response to the Main Server." << endl;
         }
         return 0;
     }
 };
 
-#endif //BACKEND_H
+#endif//BACKEND_H

@@ -1,20 +1,20 @@
 #ifndef CLIENT_H
 #define CLIENT_H
 
-#include <string>
-#include <unistd.h>
-#include <sys/socket.h>
 #include <arpa/inet.h>
-#include <netdb.h>
-#include <cstring>
 #include <cassert>
+#include <cstring>
 #include <iostream>
-#include <utility>
+#include <netdb.h>
 #include <netinet/in.h>
+#include <string>
+#include <sys/socket.h>
+#include <unistd.h>
+#include <utility>
 //#include <utility>
 
-#include "operation.h"
 #include "config.h"
+#include "operation.h"
 
 using namespace std;
 
@@ -25,25 +25,25 @@ private:
 
 
 public:
-    Client(string clientName, uint16_t serverPort) :
-            clientName(std::move(clientName)),
-            serverPort(serverPort) {
+    Client(string clientName, uint16_t serverPort) : clientName(std::move(clientName)),
+                                                     serverPort(serverPort) {
     }
 
-    void checkWallet() {};
-    void TXCoins() {};
-    void TXList() {};
-    void stats() {};
-    int run(int argc, char** argv) {
+    void checkWallet(){};
+    void TXCoins(){};
+    void TXList(){};
+    void stats(){};
+    int run(int argc, char **argv) {
         int clientSocket;
         sockaddr_in serverAddress{};
         memset(&serverAddress, 0, sizeof(serverAddress));
         serverAddress.sin_family = AF_INET;
         serverAddress.sin_port = htons(serverPort);
         serverAddress.sin_addr.s_addr = inet_addr(Config::LOCALHOST);
-        clientSocket = socket(serverAddress.sin_family,SOCK_STREAM,0);
+        clientSocket = socket(serverAddress.sin_family, SOCK_STREAM, 0);
         assert(clientSocket != -1);
-        auto* socketAddress = (sockaddr*) &serverAddress;;
+        auto *socketAddress = (sockaddr *) &serverAddress;
+        ;
         int r = connect(clientSocket, socketAddress, sizeof(serverAddress));
         cout << "The client " + clientName + " is up and running." << endl;
         if (r == -1) {
@@ -61,4 +61,4 @@ public:
     }
 };
 
-#endif //CLIENT_H
+#endif//CLIENT_H

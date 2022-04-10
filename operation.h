@@ -5,13 +5,15 @@
 
 using namespace std;
 
-class Operation{
+class Operation {
 public:
-    enum Type{NONE = 0, CHECK_WALLET, TXCOINS, TXLIST, STATS};
+    enum Type {
+        NONE = 0, CHECK_WALLET, TXCOINS, TXLIST, STATS
+    };
 
     Operation() = default;
 
-    explicit Operation(int argc, char** argv) {
+    explicit Operation(int argc, char **argv) {
         switch (argc) {
             case 2:
                 if (strcmp(argv[1], "TXLIST") == 0) {
@@ -37,8 +39,8 @@ public:
         }
     }
 
-    explicit Operation(char* s) {
-        char* token = strtok(s, "\t");
+    explicit Operation(char *s) {
+        char *token = strtok(s, "\t");
         assert(token != nullptr);
         switch (token[0]) {
             case '0':
@@ -115,7 +117,7 @@ public:
         return transferAmount;
     }
 
-    int encode(char* buffer) const {
+    int encode(char *buffer) const {
         string s;
         switch (type) {
             case NONE:

@@ -1,28 +1,27 @@
 #ifndef SERVER_H
 #define SERVER_H
 
+#include <algorithm>
+#include <arpa/inet.h>
+#include <cassert>
+#include <csignal>
+#include <cstring>
+#include <iostream>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <poll.h>
 #include <string>
-#include <unistd.h>
 #include <sys/socket.h>
 #include <sys/wait.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <cstring>
-#include <cassert>
-#include <iostream>
-#include <csignal>
-#include <vector>
-#include <utility>
-#include <poll.h>
-#include <netinet/in.h>
-#include <utility>
+#include <unistd.h>
 #include <unordered_map>
-#include <algorithm>
+#include <utility>
+#include <vector>
 
+#include "config.h"
 #include "operation.h"
 #include "transaction.h"
 #include "user.h"
-#include "config.h"
 #include "utils.h"
 
 using namespace std;
@@ -35,10 +34,10 @@ private:
     vector<sockaddr_in> backendAddressList;
     long int maxSerialID;
 
-    static void sigchld_handler(int s)
-    {
+    static void sigchld_handler(int s) {
         int saved_errno = errno;
-        while(waitpid(-1, nullptr, WNOHANG) > 0);
+        while (waitpid(-1, nullptr, WNOHANG) > 0)
+            ;
         errno = saved_errno;
     }
 
@@ -50,18 +49,18 @@ private:
         serverAddress.sin_family = AF_INET;
         serverAddress.sin_port = htons(serverPort);
         serverAddress.sin_addr.s_addr = inet_addr(Config::LOCALHOST);
-        TCPSocket = socket(serverAddress.sin_family,SOCK_STREAM,0);
+        TCPSocket = socket(serverAddress.sin_family, SOCK_STREAM, 0);
         assert(TCPSocket != -1);
-        assert(setsockopt(TCPSocket, SOL_SOCKET, SO_REUSEADDR, &yes,sizeof(int)) != -1);
-        auto* socketAddress = (sockaddr*) &serverAddress;
+        assert(setsockopt(TCPSocket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) != -1);
+        auto *socketAddress = (sockaddr *) &serverAddress;
         int r = bind(TCPSocket, socketAddress, sizeof(serverAddress));
         if (r == -1) {
             close(TCPSocket);
             assert(false);
         }
         assert(listen(TCPSocket, 8) != -1);
-        struct sigaction sigAction{};
-        sigAction.sa_handler = sigchld_handler; // reap all dead processes
+        struct sigaction sigAction {};
+        sigAction.sa_handler = sigchld_handler;// reap all dead processes
         sigemptyset(&sigAction.sa_mask);
         sigAction.sa_flags = SA_RESTART;
         assert(sigaction(SIGCHLD, &sigAction, nullptr) != -1);
@@ -77,15 +76,15 @@ private:
         serverAddress.sin_addr.s_addr = inet_addr(Config::LOCALHOST);
         UDPSocket = socket(serverAddress.sin_family, SOCK_DGRAM, 0);
         assert(UDPSocket != -1);
-        auto* socketAddress = (sockaddr*) &serverAddress;
+        auto *socketAddress = (sockaddr *) &serverAddress;
         assert(bind(UDPSocket, socketAddress, sizeof(serverAddress)) != -1);
         return UDPSocket;
     }
 
-    User getUserInfo(int UDPSocket, const Operation& o) {
+    User getUserInfo(int UDPSocket, const Operation &o) {
         User u(0, o.getUserName1(), 0, 0);
-        for (sockaddr_in backendAddress : backendAddressList) {
-            auto * address = (sockaddr*)&backendAddress;
+        for (sockaddr_in backendAddress: backendAddressList) {
+            auto *address = (sockaddr *) &backendAddress;
             socklen_t addressSize = sizeof(backendAddress);
             UDPSendOperation(UDPSocket, address,
                              addressSize, o);
@@ -94,10 +93,10 @@ private:
         return u;
     }
 
-    int TXList(int UDPSocket, const Operation& o) {
+    int TXList(int UDPSocket, const Operation &o) {
         vector<Transaction> transactions;
-        for (sockaddr_in backendAddress : backendAddressList) {
-            auto * address = (sockaddr*)&backendAddress;
+        for (sockaddr_in backendAddress: backendAddressList) {
+            auto *address = (sockaddr *) &backendAddress;
             socklen_t addressSize = sizeof(backendAddress);
             UDPSendOperation(UDPSocket, address,
                              addressSize, o);
@@ -110,37 +109,33 @@ private:
         return 0;
     }
 
-    int checkWallet(int UDPSocket, const Operation& o) {
+    int checkWallet(int UDPSocket, const Operation &o) {
         User u = getUserInfo(UDPSocket, o);
         if (u.exist()) {
 
         } else {
-
         }
         return 0;
     }
 
-    int TXCoins(int UDPSocket, const Operation& o) {
+    int TXCoins(int UDPSocket, const Operation &o) {
         pair<Operation, Operation> p = o.toSubOperation();
         User u = getUserInfo(UDPSocket, p.first), v = getUserInfo(UDPSocket, p.second);
         if (!u.exist()) {
-
         }
         if (!v.exist()) {
-
         }
         if (u.transferable(o)) {
 
         } else {
-
         }
         return 0;
     }
 
-    int stats(int UDPSocket, const Operation& o) {
+    int stats(int UDPSocket, const Operation &o) {
         unordered_map<string, User> users;
-        for (sockaddr_in backendAddress : backendAddressList) {
-            auto * address = (sockaddr*)&backendAddress;
+        for (sockaddr_in backendAddress: backendAddressList) {
+            auto *address = (sockaddr *) &backendAddress;
             socklen_t addressSize = sizeof(backendAddress);
             UDPSendOperation(UDPSocket, address,
                              addressSize, o);
@@ -154,21 +149,20 @@ private:
             }
         }
         vector<User> v;
-        for (pair<string, User> p : users) v.emplace_back(p.second);
+        for (pair<string, User> p: users) v.emplace_back(p.second);
         sort(v.begin(), v.end(), User::comp);
         unsigned long n = v.size();
         return 0;
     }
 
 public:
-    explicit Server(const vector<uint16_t>& TCPPortList,
+    explicit Server(const vector<uint16_t> &TCPPortList,
                     uint16_t UDPPort,
-                    const vector<uint16_t>& backendPortList) :
-                    TCPPortList(TCPPortList),
-                    UDPPort(UDPPort),
-                    backendPortList(backendPortList),
-                    maxSerialID(-1) {
-        for (uint16_t port : backendPortList) {
+                    const vector<uint16_t> &backendPortList) : TCPPortList(TCPPortList),
+                                                               UDPPort(UDPPort),
+                                                               backendPortList(backendPortList),
+                                                               maxSerialID(-1) {
+        for (uint16_t port: backendPortList) {
             sockaddr_in backendAddress{};
             memset(&backendAddress, 0, sizeof(backendAddress));
             backendAddress.sin_family = AF_INET;
@@ -182,37 +176,37 @@ public:
         pollfd polls[TCPPortList.size()];
         int UDPSocket = UDPSender(UDPPort);
         int TCPPortCount = 0;
-        for (uint16_t port : TCPPortList) {
+        for (uint16_t port: TCPPortList) {
             polls[TCPPortCount].fd = TCPListener(port);
             polls[TCPPortCount].events = POLLIN;
             ++TCPPortCount;
         }
-        for (const sockaddr_in& backendAddress : backendAddressList) {
-            auto * address = (sockaddr*)&backendAddress;
+        for (const sockaddr_in &backendAddress: backendAddressList) {
+            auto *address = (sockaddr *) &backendAddress;
             Operation o;
             char buffer[Config::BUFFER_LEN];
             o.encode(buffer);
             assert(sendto(UDPSocket, buffer, Config::BUFFER_SIZE, 0,
                           address, sizeof(backendAddress)) != -1);
-            assert(recvfrom(UDPSocket, buffer, Config::BUFFER_SIZE , 0,
-                         nullptr, nullptr) != -1);
+            assert(recvfrom(UDPSocket, buffer, Config::BUFFER_SIZE, 0,
+                            nullptr, nullptr) != -1);
             maxSerialID = max(maxSerialID, strtol(buffer, nullptr, 10));
         }
-//        cout << maxSerialID << endl;
+        //        cout << maxSerialID << endl;
         cout << "The main server is up and running." << endl;
         while (true) {
             assert(poll(polls, TCPPortCount, -1) != -1);
             for (int i = 0; i < TCPPortCount; ++i) {
                 if (polls[i].revents & POLLIN) {
                     sockaddr_storage clientAddressStorage{};
-                    auto * clientAddress = (sockaddr*)&clientAddressStorage;
+                    auto *clientAddress = (sockaddr *) &clientAddressStorage;
                     socklen_t clientAddressSize = sizeof(clientAddressStorage);
                     int TCPSocket = accept(polls[i].fd, clientAddress, &clientAddressSize);
                     assert(TCPSocket != -1);
                     char buffer[Config::BUFFER_LEN];
                     ssize_t n = recv(TCPSocket, buffer, Config::BUFFER_SIZE, 0);
                     Operation o(buffer);
-//                    operation.print();
+                    //                    operation.print();
                     switch (o.getType()) {
                         case Operation::Type::CHECK_WALLET:
                             checkWallet(UDPSocket, o);
@@ -230,7 +224,7 @@ public:
                             assert(false);
                     }
                     strcat(buffer, "server");
-                    
+
                     assert(n != -1);
                     assert(send(TCPSocket, buffer, Config::BUFFER_SIZE, 0) != -1);
                     close(TCPSocket);
@@ -240,4 +234,4 @@ public:
     }
 };
 
-#endif //SERVER_H
+#endif//SERVER_H
