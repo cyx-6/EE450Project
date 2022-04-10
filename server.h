@@ -11,7 +11,7 @@
 #include <cassert>
 #include <iostream>
 #include <csignal>
-#include <list>
+#include <vector>
 #include <utility>
 #include <poll.h>
 #include <netinet/in.h>
@@ -26,10 +26,11 @@ using namespace std;
 
 class Server {
 private:
-    list<uint16_t> TCPPortList;
+    vector<uint16_t> TCPPortList;
     uint16_t UDPPort;
-    list<uint16_t> backendPortList;
-    list<sockaddr_in> backendAddressList;
+    vector<uint16_t> backendPortList;
+    vector<sockaddr_in> backendAddressList;
+    long int maxSerialID{};
 
     static void sigchld_handler(int s)
     {
@@ -82,25 +83,25 @@ private:
         for (sockaddr_in backendAddress : backendAddressList) {
             char buffer[Config::BUFFER_LEN];
             auto * address = (sockaddr*)&backendAddress;
-            ssize_t n = sendto(UDPSocket, buffer, sizeof(buffer), 0,
+            ssize_t n = sendto(UDPSocket, buffer, Config::BUFFER_SIZE, 0,
                        address, sizeof(backendAddress));
             assert(n != -1);
             sockaddr_storage addressStorage{};
             auto * serverAddress = (sockaddr*)&addressStorage;
             socklen_t addressSize = sizeof(addressStorage);
-            n = recvfrom(UDPSocket, buffer, sizeof(buffer) , 0,
+            n = recvfrom(UDPSocket, buffer, Config::BUFFER_SIZE , 0,
                          serverAddress, &addressSize);
             strcat(buffer, "server");
         }
     }
 
 public:
-    explicit Server(list<uint16_t> TCPPortList,
+    explicit Server(const vector<uint16_t>& TCPPortList,
                     uint16_t UDPPort,
-                    list<uint16_t> backendPortList) :
-                    TCPPortList(std::move(TCPPortList)),
+                    const vector<uint16_t>& backendPortList) :
+                    TCPPortList(TCPPortList),
                     UDPPort(UDPPort),
-                    backendPortList(std::move(backendPortList)) {
+                    backendPortList(backendPortList) {
         for (uint16_t port : backendPortList) {
             sockaddr_in backendAddress{};
             memset(&backendAddress, 0, sizeof(backendAddress));
@@ -120,6 +121,18 @@ public:
             polls[TCPPortCount].events = POLLIN;
             ++TCPPortCount;
         }
+        for (const sockaddr_in& backendAddress : backendAddressList) {
+            auto * address = (sockaddr*)&backendAddress;
+            Operation o;
+            char buffer[Config::BUFFER_LEN];
+            o.encode(buffer);
+            assert(sendto(UDPSocket, buffer, Config::BUFFER_SIZE, 0,
+                          address, sizeof(backendAddress)) != -1);
+            assert(recvfrom(UDPSocket, buffer, Config::BUFFER_SIZE , 0,
+                         nullptr, nullptr) != -1);
+            maxSerialID = max(maxSerialID, strtol(buffer, nullptr, 10));
+        }
+        cout << maxSerialID << endl;
         cout << "The main server is up and running." << endl;
         while (true) {
             assert(poll(polls, TCPPortCount, -1) != -1);
@@ -131,24 +144,29 @@ public:
                     int TCPSocket = accept(polls[i].fd, clientAddress, &clientAddressSize);
                     assert(TCPSocket != -1);
                     char buffer[Config::BUFFER_LEN];
-                    ssize_t n = recv(TCPSocket, buffer, sizeof(buffer), 0);
-                    Operation operation(buffer);
-                    operation.print();
-                    strcat(buffer, "server");
-                    for (sockaddr_in backendAddress : backendAddressList) {
-                        auto * address = (sockaddr*)&backendAddress;
-                        n = sendto(UDPSocket, buffer, sizeof(buffer), 0,
-                                   address, sizeof(backendAddress));
-                        assert(n != -1);
-                        sockaddr_storage addressStorage{};
-                        auto * serverAddress = (sockaddr*)&addressStorage;
-                        socklen_t addressSize = sizeof(addressStorage);
-                        n = recvfrom(UDPSocket, buffer, sizeof(buffer) , 0,
-                                     serverAddress, &addressSize);
-                        strcat(buffer, "server");
+                    ssize_t n = recv(TCPSocket, buffer, Config::BUFFER_SIZE, 0);
+                    Operation o(buffer);
+//                    operation.print();
+                    switch (o.getType()) {
+                        case Operation::Type::CHECK_WALLET:
+//                            checkWallet(backendSocket, serverAddress, serverAddressSize, o);
+                            break;
+                        case Operation::Type::TXCOINS:
+//                            TXCoins(o);
+                            break;
+                        case Operation::Type::TXLIST:
+//                            TXList(backendSocket, serverAddress, serverAddressSize);
+                            break;
+                        case Operation::Type::STATS:
+//                            stats(backendSocket, serverAddress, serverAddressSize);
+                            break;
+                        default:
+                            assert(false);
                     }
+                    strcat(buffer, "server");
+                    
                     assert(n != -1);
-                    assert(send(TCPSocket, buffer, sizeof(buffer), 0) != -1);
+                    assert(send(TCPSocket, buffer, Config::BUFFER_SIZE, 0) != -1);
                     close(TCPSocket);
                 }
             }

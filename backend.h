@@ -29,47 +29,61 @@ private:
     unordered_map<string, User> users;
     vector<Transaction> transactions;
 
-    int TXList() {
+    int maxSerialID(int backendSocket, sockaddr* serverAddress, socklen_t serverAddressSize) {
+        string s = to_string(transactions.back().getSerialID());
+        assert(sendto(backendSocket, s.c_str(), sizeof(s.c_str()), 0,
+                      serverAddress, serverAddressSize) != -1);
+        return 0;
+    }
+
+    int TXList(int backendSocket, sockaddr* serverAddress, socklen_t serverAddressSize) {
+        string s = to_string(transactions.size());
+        assert(sendto(backendSocket, s.c_str(), sizeof(s.c_str()), 0,
+                      serverAddress, serverAddressSize) != -1);
         for (const Transaction& t: transactions) {
             char buffer[Config::BUFFER_LEN];
             t.encode(buffer);
+            assert(sendto(backendSocket, buffer, Config::BUFFER_SIZE, 0,
+                          serverAddress, serverAddressSize) != -1);
         }
         return 0;
     }
 
-    int checkWallet(const Operation& o) {
+    int checkWallet(int backendSocket, sockaddr* serverAddress, socklen_t serverAddressSize, const Operation& o) {
         char buffer[Config::BUFFER_LEN];
         string userName1 = o.getUserName1();
         User u(0, userName1, 0, 0);
         if (users.count(userName1)) u.merge(users.at(userName1));
-        u.setFirst();
         u.encode(buffer);
+        assert(sendto(backendSocket, buffer, Config::BUFFER_SIZE, 0,
+                      serverAddress, serverAddressSize) != -1);
         return 0;
     }
 
-    int TXCoins(const Transaction& t) {
-        unsigned long n = transactions.size();
-        transactions.emplace_back(t);
-        transactions[n].linkNext(transactions[n + 1]);
+    int TXCoins(const Operation& o) {
+        transactions.emplace_back(o.toTransaction());
         return 0;
     }
 
-    int stats() {
+    int stats(int backendSocket, sockaddr* serverAddress, socklen_t serverAddressSize) {
         vector<User> v;
         for (pair<string, User> p : users) v.emplace_back(p.second);
         sort(v.begin(), v.end(), User::comp);
         unsigned long n = v.size();
-        v[0].setFirst();
-        for (int i = 0; i < n - 1; ++i) v[i].linkNext(v[i + 1]);
+        string s = to_string(n);
+        assert(sendto(backendSocket, s.c_str(), sizeof(s.c_str()), 0,
+                      serverAddress, serverAddressSize) != -1);
         for (int i = 0; i < n; ++i) {
             char buffer[Config::BUFFER_LEN];
+            v[i].setRanking(i + 1);
             v[i].encode(buffer);
-            cout << buffer << endl;
+            assert(sendto(backendSocket, buffer, Config::BUFFER_SIZE, 0,
+                          serverAddress, serverAddressSize) != -1);
         }
         return 0;
     }
 
-    int load() {
+    long int load() {
         ifstream file(fileName);
         int n = 0;
         while (file.peek() != EOF) {
@@ -79,7 +93,6 @@ private:
             if (s.empty()) break;
             Transaction t(s.c_str());
             transactions.emplace_back(t);
-            transactions[n].linkNext(transactions[n + 1]);
             string userName1 = t.getUserName1(), userName2 = t.getUserName2();
             long int transferAmount = t.getTransferAmount();
             if (!users.count(userName1))
@@ -90,8 +103,8 @@ private:
             users.at(userName2).merge(User(0, userName2, 1, transferAmount));
             ++n;
         }
+        sort(transactions.begin(), transactions.end(), Transaction::comp);
         file.close();
-        stats();
         return 0;
     }
 
@@ -117,15 +130,33 @@ public:
             char buffer[Config::BUFFER_LEN];
             sockaddr_storage serverAddressStorage{};
             auto * serverAddress = (sockaddr*)&serverAddressStorage;
-            socklen_t addressSize = sizeof(serverAddressStorage);
-            ssize_t n = recvfrom(backendSocket, buffer, sizeof(buffer), 0,
-                                 serverAddress, &addressSize);
-            assert(n != -1);
-            cout << "The Server" + backendName + " received a request from the Main Server." << endl;
-            strcat(buffer, "backend");
-            assert(sendto(backendSocket, buffer, sizeof(buffer), 0,
-                          serverAddress, addressSize) != -1);
-            cout << "The Server" + backendName +  " finished sending the response to the Main Server." << endl;
+            socklen_t serverAddressSize = sizeof(serverAddressStorage);
+            assert(recvfrom(backendSocket, buffer, Config::BUFFER_SIZE, 0,
+                            serverAddress, &serverAddressSize) != -1);
+            Operation o(buffer);
+            if (o.getType() != Operation::Type::NONE)
+                cout << "The Server" + backendName + " received a request from the Main Server." << endl;
+            switch (o.getType()) {
+                case Operation::Type::NONE:
+                    maxSerialID(backendSocket, serverAddress, serverAddressSize);
+                    break;
+                case Operation::Type::CHECK_WALLET:
+                    checkWallet(backendSocket, serverAddress, serverAddressSize, o);
+                    break;
+                case Operation::Type::TXCOINS:
+                    TXCoins(o);
+                    break;
+                case Operation::Type::TXLIST:
+                    TXList(backendSocket, serverAddress, serverAddressSize);
+                    break;
+                case Operation::Type::STATS:
+                    stats(backendSocket, serverAddress, serverAddressSize);
+                    break;
+                default:
+                    assert(false);
+            }
+            if (o.getType() != Operation::Type::NONE)
+                cout << "The Server" + backendName +  " finished sending the response to the Main Server." << endl;
         }
         return 0;
     }

@@ -5,6 +5,7 @@
 class Config{
 public:
     static const int BUFFER_LEN = 4096;
+    static const int BUFFER_SIZE = sizeof(char) * BUFFER_LEN;
     static constexpr const char* LOCALHOST = "127.0.0.1";
 };
 

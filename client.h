@@ -53,8 +53,8 @@ public:
         char buffer[Config::BUFFER_LEN];
         Operation operation(argc, argv);
         assert(operation.encode(buffer) == 0);
-        assert(send(clientSocket, buffer, sizeof(buffer), 0) != -1);
-        assert(recv(clientSocket, buffer, sizeof(buffer), 0) != -1);
+        assert(send(clientSocket, buffer, Config::BUFFER_SIZE, 0) != -1);
+        assert(recv(clientSocket, buffer, Config::BUFFER_SIZE, 0) != -1);
         cout << "client" + clientName + ": " + string(buffer) << endl;
         close(clientSocket);
         return 0;

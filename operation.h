@@ -1,16 +1,16 @@
 #ifndef OPERATION_H
 #define OPERATION_H
 
+#include "transaction.h"
 
 using namespace std;
 
 class Operation{
-private:
-    enum Type{NONE = 0, CHECK_WALLET, TXCOINS, TXLIST, STATS};
-    Type type = NONE;
-    string userName1, userName2;
-    long int transferAmount = 0;
 public:
+    enum Type{NONE = 0, CHECK_WALLET, TXCOINS, TXLIST, STATS};
+
+    Operation() = default;
+
     explicit Operation(int argc, char** argv) {
         switch (argc) {
             case 2:
@@ -30,6 +30,7 @@ public:
                 userName1 = string(argv[1]);
                 userName2 = string(argv[2]);
                 transferAmount = strtol(argv[3], nullptr, 10);
+                serialID = 0;
                 return;
             default:
                 assert(false);
@@ -59,6 +60,9 @@ public:
                 token = strtok(nullptr, "\t");
                 assert(token != nullptr);
                 transferAmount = strtol(token, nullptr, 10);
+                token = strtok(nullptr, "\t");
+                assert(token != nullptr);
+                serialID = strtol(token, nullptr, 10);
                 return;
             case '3':
                 type = TXLIST;
@@ -72,6 +76,28 @@ public:
             default:
                 assert(false);
         }
+    }
+
+    pair<Operation, Operation> toSubOperation() {
+        assert(type == TXCOINS);
+        Operation u, v;
+        u.type = v.type = CHECK_WALLET;
+        u.userName1 = userName1;
+        v.userName1 = userName2;
+        return make_pair(u, v);
+    }
+
+    Transaction toTransaction() const {
+        assert(type == TXCOINS);
+        return Transaction(serialID, userName1, userName2, transferAmount);
+    }
+
+    void setSerialID(long int sid) {
+        serialID = sid;
+    }
+
+    Type getType() const {
+        return type;
     }
 
     string getUserName1() const {
@@ -117,6 +143,12 @@ public:
     void print() {
         cout << type << " " << userName1 << " " << userName2 << " " << transferAmount << endl;
     }
+
+private:
+    Type type = NONE;
+    string userName1, userName2;
+    long int transferAmount = 0, serialID = 0;
+
 };
 
 
