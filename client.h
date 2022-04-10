@@ -15,6 +15,7 @@
 
 #include "config.h"
 #include "operation.h"
+#include "utils.h"
 
 using namespace std;
 
@@ -50,12 +51,20 @@ public:
             close(clientSocket);
             assert(false);
         }
-        char buffer[Config::BUFFER_LEN];
-        Operation operation(argc, argv);
-        assert(operation.encode(buffer) == 0);
-        assert(send(clientSocket, buffer, Config::BUFFER_SIZE, 0) != -1);
-        assert(recv(clientSocket, buffer, Config::BUFFER_SIZE, 0) != -1);
-        cout << "client" + clientName + ": " + string(buffer) << endl;
+        Operation o(argc, argv);
+        TCPSendOperation(clientSocket, o);
+        switch (o.getType()) {
+            case Operation::Type::CHECK_WALLET:
+                break;
+            case Operation::Type::TXCOINS:
+                break;
+            case Operation::Type::TXLIST:
+                break;
+            case Operation::Type::STATS:
+                break;
+            default:
+                assert(false);
+        }
         close(clientSocket);
         return 0;
     }

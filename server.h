@@ -10,6 +10,7 @@
 #include <netdb.h>
 #include <netinet/in.h>
 #include <poll.h>
+#include <random>
 #include <string>
 #include <sys/socket.h>
 #include <sys/wait.h>
@@ -93,7 +94,7 @@ private:
         return u;
     }
 
-    int TXList(int UDPSocket, const Operation &o) {
+    int TXList(int UDPSocket, int TCPSocket, const Operation &o) {
         vector<Transaction> transactions;
         for (sockaddr_in backendAddress: backendAddressList) {
             auto *address = (sockaddr *) &backendAddress;
@@ -109,26 +110,26 @@ private:
         return 0;
     }
 
-    int checkWallet(int UDPSocket, const Operation &o) {
+    int checkWallet(int UDPSocket, int TCPSocket, const Operation &o) {
         User u = getUserInfo(UDPSocket, o);
         if (u.exist()) {
 
         } else {
         }
+        TCPSendUser(TCPSocket, u);
         return 0;
     }
 
-    int TXCoins(int UDPSocket, const Operation &o) {
+    int TXCoins(int UDPSocket, int TCPSocket, const Operation &o, size_t k) {
         pair<Operation, Operation> p = o.toSubOperation();
         User u = getUserInfo(UDPSocket, p.first), v = getUserInfo(UDPSocket, p.second);
-        if (!u.exist()) {
+        if (u.exist() and v.exist() and u.transferable(o)) {
+            auto *address = (sockaddr *) &backendAddressList[k];
+            socklen_t addressSize = sizeof(backendAddressList[k]);
+            UDPSendOperation(UDPSocket, address, addressSize, o);
         }
-        if (!v.exist()) {
-        }
-        if (u.transferable(o)) {
-
-        } else {
-        }
+        TCPSendUser(TCPSocket, u);
+        TCPSendUser(TCPSocket, v);
         return 0;
     }
 
@@ -194,6 +195,9 @@ public:
         }
         //        cout << maxSerialID << endl;
         cout << "The main server is up and running." << endl;
+        random_device device;
+        mt19937 generator(device());
+        uniform_int_distribution<size_t> distribution(0,backendPortList.size() - 1);
         while (true) {
             assert(poll(polls, TCPPortCount, -1) != -1);
             for (int i = 0; i < TCPPortCount; ++i) {
@@ -203,19 +207,17 @@ public:
                     socklen_t clientAddressSize = sizeof(clientAddressStorage);
                     int TCPSocket = accept(polls[i].fd, clientAddress, &clientAddressSize);
                     assert(TCPSocket != -1);
-                    char buffer[Config::BUFFER_LEN];
-                    ssize_t n = recv(TCPSocket, buffer, Config::BUFFER_SIZE, 0);
-                    Operation o(buffer);
-                    //                    operation.print();
+                    Operation o = TCPReceiveOperation(TCPSocket);
+                    // operation.print();
                     switch (o.getType()) {
                         case Operation::Type::CHECK_WALLET:
-                            checkWallet(UDPSocket, o);
+                            checkWallet(UDPSocket, TCPSocket, o);
                             break;
                         case Operation::Type::TXCOINS:
-                            TXCoins(UDPSocket, o);
+                            TXCoins(UDPSocket, TCPSocket, o, distribution(generator));
                             break;
                         case Operation::Type::TXLIST:
-                            TXList(UDPSocket, o);
+                            TXList(UDPSocket, TCPSocket, o);
                             break;
                         case Operation::Type::STATS:
                             stats(UDPSocket, o);
@@ -223,10 +225,6 @@ public:
                         default:
                             assert(false);
                     }
-                    strcat(buffer, "server");
-
-                    assert(n != -1);
-                    assert(send(TCPSocket, buffer, Config::BUFFER_SIZE, 0) != -1);
                     close(TCPSocket);
                 }
             }
