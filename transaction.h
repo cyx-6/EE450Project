@@ -16,28 +16,32 @@ public:
     explicit Transaction(const char *t) {
         char s[strlen(t)];
         strcpy(s, t);
-        char *token = strtok(s, "\t");
+        char *token = strtok(s, Config::SEPARATOR);
         assert(token != nullptr);
         serialID = strtol(token, nullptr, 10);
-        token = strtok(nullptr, "\t");
+        token = strtok(nullptr, Config::SEPARATOR);
         assert(token != nullptr);
         userName1 = string(token);
-        token = strtok(nullptr, "\t");
+        token = strtok(nullptr, Config::SEPARATOR);
         assert(token != nullptr);
         userName2 = string(token);
-        token = strtok(nullptr, "\t");
+        token = strtok(nullptr, Config::SEPARATOR);
         assert(token != nullptr);
         transferAmount = strtol(token, nullptr, 10);
-        token = strtok(nullptr, "\t");
+        token = strtok(nullptr, Config::SEPARATOR);
         assert(token == nullptr);
     }
 
-    int encode(char *buffer) const {
-        string s = to_string(serialID) + "\t" + userName1 + "\t" + userName2 + "\t" +
-                   to_string(transferAmount);
-        strcpy(buffer, s.c_str());
-        return 0;
+    string toString() const {
+        return to_string(serialID) + Config::SEPARATOR + userName1 + Config::SEPARATOR +
+               userName2 + Config::SEPARATOR + to_string(transferAmount);
     }
+
+//    int encode(char *buffer) const {
+//        string s = toString();
+//        strcpy(buffer, s.c_str());
+//        return 0;
+//    }
 
     string getUserName1() const {
         return userName1;

@@ -40,29 +40,29 @@ public:
     }
 
     explicit Operation(char *s) {
-        char *token = strtok(s, "\t");
+        char *token = strtok(s, Config::SEPARATOR);
         assert(token != nullptr);
         switch (token[0]) {
             case '0':
                 return;
             case '1':
                 type = CHECK_WALLET;
-                token = strtok(nullptr, "\t");
+                token = strtok(nullptr, Config::SEPARATOR);
                 assert(token != nullptr);
                 userName1 = string(token);
                 return;
             case '2':
                 type = TXCOINS;
-                token = strtok(nullptr, "\t");
+                token = strtok(nullptr, Config::SEPARATOR);
                 assert(token != nullptr);
                 userName1 = string(token);
-                token = strtok(nullptr, "\t");
+                token = strtok(nullptr, Config::SEPARATOR);
                 assert(token != nullptr);
                 userName2 = string(token);
-                token = strtok(nullptr, "\t");
+                token = strtok(nullptr, Config::SEPARATOR);
                 assert(token != nullptr);
                 transferAmount = strtol(token, nullptr, 10);
-                token = strtok(nullptr, "\t");
+                token = strtok(nullptr, Config::SEPARATOR);
                 assert(token != nullptr);
                 serialID = strtol(token, nullptr, 10);
                 return;
@@ -71,7 +71,7 @@ public:
                 return;
             case '4':
                 type = STATS;
-                token = strtok(nullptr, "\t");
+                token = strtok(nullptr, Config::SEPARATOR);
                 assert(token != nullptr);
                 userName1 = string(token);
                 return;
@@ -117,34 +117,29 @@ public:
         return transferAmount;
     }
 
-    int encode(char *buffer) const {
-        string s;
+    string toString() const {
         switch (type) {
             case NONE:
-                s = "0";
-                break;
+                return "0";
             case CHECK_WALLET:
-                s = "1\t" + userName1;
-                break;
+                return "1" + string(Config::SEPARATOR) + userName1;
             case TXCOINS:
-                s = "2\t" + userName1 + "\t" + userName2 + "\t" + to_string(transferAmount);
-                break;
+                return "2" + string(Config::SEPARATOR) + userName1 + Config::SEPARATOR + userName2 +
+                       Config::SEPARATOR + to_string(transferAmount);
             case TXLIST:
-                s = "3";
-                break;
+                return "3";
             case STATS:
-                s = "4\t" + userName1;
-                break;
+                return "4" + string(Config::SEPARATOR) + userName1;
             default:
                 assert(false);
         }
-        strcpy(buffer, s.c_str());
-        return 0;
     }
 
-    void print() {
-        cout << type << " " << userName1 << " " << userName2 << " " << transferAmount << endl;
-    }
+//    int encode(char *buffer) const {
+//        string s = toString();
+//        strcpy(buffer, s.c_str());
+//        return 0;
+//    }
 
 private:
     Type type = NONE;

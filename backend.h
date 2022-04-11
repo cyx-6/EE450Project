@@ -42,8 +42,8 @@ private:
         UDPSendPrimitive(backendSocket, serverAddress,
                          serverAddressSize, transactions.size());
         for (const Transaction &t: transactions) {
-            UDPSendTransaction(backendSocket, serverAddress,
-                               serverAddressSize, t);
+            UDPSendObject(backendSocket, serverAddress,
+                          serverAddressSize, t);
         }
         return 0;
     }
@@ -52,8 +52,8 @@ private:
         string userName1 = o.getUserName1();
         User u(0, userName1, 0, 0);
         if (users.count(userName1)) u.merge(users.at(userName1));
-        UDPSendUser(backendSocket, serverAddress,
-                    serverAddressSize, u);
+        UDPSendObject(backendSocket, serverAddress,
+                      serverAddressSize, u);
         return 0;
     }
 
@@ -69,14 +69,11 @@ private:
         v.reserve(users.size());
         for (pair<string, User> p: users) v.emplace_back(p.second);
         sort(v.begin(), v.end(), User::comp);
-        unsigned long n = v.size();
         UDPSendPrimitive(backendSocket, serverAddress,
                          serverAddressSize, v.size());
-        for (int i = 0; i < n; ++i) {
-            v[i].setRanking(i + 1);
-            UDPSendUser(backendSocket, serverAddress,
-                        serverAddressSize, v[i]);
-        }
+        for (const User &u : v)
+            UDPSendObject(backendSocket, serverAddress,
+                          serverAddressSize, u);
         return 0;
     }
 
@@ -86,7 +83,7 @@ private:
         while (file.peek() != EOF) {
             string s;
             getline(file, s);
-            replace(s.begin(), s.end(), ' ', '\t');
+            replace(s.begin(), s.end(), ' ', Config::SEPARATOR[0]);
             if (s.empty()) break;
             Transaction t(s.c_str());
             transactions.emplace_back(t);
@@ -126,8 +123,8 @@ public:
             sockaddr_storage serverAddressStorage{};
             auto *serverAddress = (sockaddr *) &serverAddressStorage;
             socklen_t serverAddressSize = sizeof(serverAddressStorage);
-            Operation o = UDPReceiveOperation(backendSocket, serverAddress,
-                                              &serverAddressSize);
+            Operation o = UDPReceiveObject<Operation>(backendSocket, serverAddress,
+                                                      &serverAddressSize);
             cout << "The Server" + backendName + " received a request from the Main Server." << endl;
             switch (o.getType()) {
                 case Operation::Type::NONE:

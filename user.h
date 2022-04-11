@@ -19,32 +19,38 @@ public:
     explicit User(const char *u) {
         char s[strlen(u)];
         strcpy(s, u);
-        char *token = strtok(s, "\t");
+        cout << "fff" << string(u) << endl;
+        cout << "ggg" << string(s) << endl;
+        char *token = strtok(s, Config::SEPARATOR);
         assert(token != nullptr);
         ranking = strtol(token, nullptr, 10);
-        token = strtok(nullptr, "\t");
+        token = strtok(nullptr, Config::SEPARATOR);
         assert(token != nullptr);
         userName = string(token);
-        token = strtok(nullptr, "\t");
+        token = strtok(nullptr, Config::SEPARATOR);
         assert(token != nullptr);
         transactionNumber = strtol(token, nullptr, 10);
-        token = strtok(nullptr, "\t");
+        token = strtok(nullptr, Config::SEPARATOR);
         assert(token != nullptr);
         balance = strtol(token, nullptr, 10);
-        token = strtok(nullptr, "\t");
+        token = strtok(nullptr, Config::SEPARATOR);
         assert(token != nullptr);
         initialBalanceAdded = strtol(token, nullptr, 10);
-        token = strtok(nullptr, "\t");
+        token = strtok(nullptr, Config::SEPARATOR);
         assert(token == nullptr);
     }
 
-    int encode(char *buffer) const {
-        string s = to_string(ranking) + "\t" + userName + "\t" +
-                   to_string(transactionNumber) + "\t" + to_string(balance) + "\t" +
-                   to_string(initialBalanceAdded);
-        strcpy(buffer, s.c_str());
-        return 0;
+    string toString() const {
+        return to_string(ranking) + Config::SEPARATOR + userName + Config::SEPARATOR +
+               to_string(transactionNumber) + Config::SEPARATOR + to_string(balance) +
+               Config::SEPARATOR + to_string(initialBalanceAdded);
     }
+
+//    int encode(char *buffer) const {
+//        string s = toString();
+//        strcpy(buffer, s.c_str());
+//        return 0;
+//    }
 
     void merge(const User &u) {
         transactionNumber += u.transactionNumber;
@@ -77,6 +83,13 @@ public:
     bool transferable(const Operation &o) const {
         return initialBalanceAdded ? (balance >= o.getTransferAmount()) :
                                    (balance + Config::INITIAL_BALANCE >= o.getTransferAmount());
+    }
+
+    void transfer(User &u, const Operation &o) {
+        assert(transferable(o));
+        long int t = o.getTransferAmount();
+        balance -= t;
+        u.balance += t;
     }
 
     long int currentBalance() const {
