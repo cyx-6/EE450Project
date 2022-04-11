@@ -30,7 +30,9 @@ private:
     unordered_map<string, User> users;
     vector<Transaction> transactions;
 
-    int maxSerialID(int backendSocket, sockaddr *serverAddress, socklen_t serverAddressSize) {
+    int backendInfo(int backendSocket, sockaddr *serverAddress, socklen_t serverAddressSize) {
+        UDPSendPrimitive(backendSocket, serverAddress,
+                         serverAddressSize, backendName);
         UDPSendPrimitive(backendSocket, serverAddress,
                          serverAddressSize, transactions.back().getSerialID());
         return 0;
@@ -55,13 +57,16 @@ private:
         return 0;
     }
 
-    int TXCoins(const Operation &o) {
-        transactions.emplace_back(o.toTransaction());
+    int TXCoins(int backendSocket, sockaddr *serverAddress, socklen_t serverAddressSize, const Operation &o) {
+        Transaction t(o.toTransaction());
+        transactions.emplace_back(t);
+        UDPSendPrimitive(backendSocket, serverAddress, serverAddressSize, t.getSerialID());
         return 0;
     }
 
     int stats(int backendSocket, sockaddr *serverAddress, socklen_t serverAddressSize) {
         vector<User> v;
+        v.reserve(users.size());
         for (pair<string, User> p: users) v.emplace_back(p.second);
         sort(v.begin(), v.end(), User::comp);
         unsigned long n = v.size();
@@ -105,7 +110,7 @@ public:
                                                                          backendPort(backendPort) {}
 
     int start() {
-        int backendSocket = 0;
+        int backendSocket;
         load();
         sockaddr_in backendAddress{};
         memset(&backendAddress, 0, sizeof(backendAddress));
@@ -126,13 +131,13 @@ public:
             cout << "The Server" + backendName + " received a request from the Main Server." << endl;
             switch (o.getType()) {
                 case Operation::Type::NONE:
-                    maxSerialID(backendSocket, serverAddress, serverAddressSize);
+                    backendInfo(backendSocket, serverAddress, serverAddressSize);
                     break;
                 case Operation::Type::CHECK_WALLET:
                     checkWallet(backendSocket, serverAddress, serverAddressSize, o);
                     break;
                 case Operation::Type::TXCOINS:
-                    TXCoins(o);
+                    TXCoins(backendSocket, serverAddress, serverAddressSize, o);
                     break;
                 case Operation::Type::TXLIST:
                     TXList(backendSocket, serverAddress, serverAddressSize);

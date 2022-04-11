@@ -14,7 +14,7 @@ public:
                   long int balance) :
             ranking(ranking), userName(std::move(userName)),
             transactionNumber(transactionNumber),
-            balance(balance) {}
+            balance(balance), initialBalanceAdded(false) {}
 
     explicit User(const char *u) {
         char s[strlen(u)];
@@ -32,12 +32,16 @@ public:
         assert(token != nullptr);
         balance = strtol(token, nullptr, 10);
         token = strtok(nullptr, "\t");
+        assert(token != nullptr);
+        initialBalanceAdded = strtol(token, nullptr, 10);
+        token = strtok(nullptr, "\t");
         assert(token == nullptr);
     }
 
-    int encode(char *buffer, bool withNextRanking = true) const {
+    int encode(char *buffer) const {
         string s = to_string(ranking) + "\t" + userName + "\t" +
-                   to_string(transactionNumber) + "\t" + to_string(balance);
+                   to_string(transactionNumber) + "\t" + to_string(balance) + "\t" +
+                   to_string(initialBalanceAdded);
         strcpy(buffer, s.c_str());
         return 0;
     }
@@ -47,7 +51,7 @@ public:
         balance += u.balance;
     }
 
-    string getUserName() {
+    string getUserName() const {
         return userName;
     }
 
@@ -63,13 +67,26 @@ public:
         return transactionNumber > 0;
     }
 
+    void addInitialBalance() {
+        assert(!initialBalanceAdded);
+        assert(transactionNumber);
+        balance += Config::INITIAL_BALANCE;
+        initialBalanceAdded = true;
+    }
+
     bool transferable(const Operation &o) const {
-        return balance + Config::INITIAL_BALANCE >= o.getTransferAmount();
+        return initialBalanceAdded ? (balance >= o.getTransferAmount()) :
+                                   (balance + Config::INITIAL_BALANCE >= o.getTransferAmount());
+    }
+
+    long int currentBalance() const {
+        return initialBalanceAdded ? balance : (balance + Config::INITIAL_BALANCE);
     }
 
 private:
     long int ranking, transactionNumber, balance;
     string userName;
+    bool initialBalanceAdded;
 };
 
 #endif //USER_H

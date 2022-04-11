@@ -44,7 +44,7 @@ public:
         clientSocket = socket(serverAddress.sin_family, SOCK_STREAM, 0);
         assert(clientSocket != -1);
         auto *socketAddress = (sockaddr *) &serverAddress;
-        ;
+
         int r = connect(clientSocket, socketAddress, sizeof(serverAddress));
         cout << "The client " + clientName + " is up and running." << endl;
         if (r == -1) {

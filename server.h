@@ -33,6 +33,8 @@ private:
     uint16_t UDPPort;
     vector<uint16_t> backendPortList;
     vector<sockaddr_in> backendAddressList;
+    vector<string> backendNameList;
+    unordered_map<uint16_t, string> clientNameMap;
     long int maxSerialID;
 
     static void sigchld_handler(int s) {
@@ -69,7 +71,7 @@ private:
     }
 
     static int UDPSender(uint16_t serverPort) {
-        int UDPSocket = 0;
+        int UDPSocket;
         sockaddr_in serverAddress{};
         memset(&serverAddress, 0, sizeof(serverAddress));
         serverAddress.sin_family = AF_INET;
@@ -84,12 +86,17 @@ private:
 
     User getUserInfo(int UDPSocket, const Operation &o) {
         User u(0, o.getUserName1(), 0, 0);
+        int k = 0;
         for (sockaddr_in backendAddress: backendAddressList) {
+            cout << "The main server sent a request to server " + backendNameList[k] << "." << endl;
             auto *address = (sockaddr *) &backendAddress;
             socklen_t addressSize = sizeof(backendAddress);
             UDPSendOperation(UDPSocket, address,
                              addressSize, o);
             u.merge(UDPReceiveUser(UDPSocket));
+            cout << "The main server received transactions from Server " + backendNameList[k] +
+                            " using UDP over port " + to_string(backendPortList[k]) << "." << endl;
+            ++k;
         }
         return u;
     }
@@ -110,26 +117,35 @@ private:
         return 0;
     }
 
-    int checkWallet(int UDPSocket, int TCPSocket, const Operation &o) {
+    int checkWallet(int UDPSocket, int TCPSocket, uint16_t port, const Operation &o) {
+        cout << "The main server received input=" + o.getUserName1() +
+                        " from the client using TCP over port " + to_string(port) + "." << endl;
         User u = getUserInfo(UDPSocket, o);
-        if (u.exist()) {
-
-        } else {
-        }
         TCPSendUser(TCPSocket, u);
+        cout << "The main server sent the current balance to client " + clientNameMap.at(port) << "." << endl;
         return 0;
     }
 
-    int TXCoins(int UDPSocket, int TCPSocket, const Operation &o, size_t k) {
+    int TXCoins(int UDPSocket, int TCPSocket, uint16_t port, Operation &o, size_t k) {
         pair<Operation, Operation> p = o.toSubOperation();
+        cout << "The main server received from " + o.getUserName1() + " to transfer " +
+                        to_string(o.getTransferAmount()) + " coins to " +
+                        o.getUserName2() + " using TCP over port " + to_string(port) + "." << endl;
         User u = getUserInfo(UDPSocket, p.first), v = getUserInfo(UDPSocket, p.second);
         if (u.exist() and v.exist() and u.transferable(o)) {
             auto *address = (sockaddr *) &backendAddressList[k];
             socklen_t addressSize = sizeof(backendAddressList[k]);
+            cout << "The main server sent a request to server " + backendNameList[k] << "." << endl;
+            o.setSerialID(maxSerialID);
             UDPSendOperation(UDPSocket, address, addressSize, o);
+            assert(UDPReceiveLongInt(UDPSocket) == maxSerialID);
+            cout << "The main server received the feedback from server " + backendNameList[k] +
+                            " using UDP over port " + to_string(backendPortList[k]) << "." << endl;
+            ++maxSerialID;
         }
         TCPSendUser(TCPSocket, u);
         TCPSendUser(TCPSocket, v);
+        cout << "The main server sent the result of the transaction to client " << clientNameMap.at(port) << "." << endl;
         return 0;
     }
 
@@ -150,6 +166,7 @@ private:
             }
         }
         vector<User> v;
+        v.reserve(users.size());
         for (pair<string, User> p: users) v.emplace_back(p.second);
         sort(v.begin(), v.end(), User::comp);
         unsigned long n = v.size();
@@ -163,6 +180,7 @@ public:
                                                                UDPPort(UDPPort),
                                                                backendPortList(backendPortList),
                                                                maxSerialID(-1) {
+        backendAddressList.reserve(backendPortList.size());
         for (uint16_t port: backendPortList) {
             sockaddr_in backendAddress{};
             memset(&backendAddress, 0, sizeof(backendAddress));
@@ -181,19 +199,16 @@ public:
             polls[TCPPortCount].fd = TCPListener(port);
             polls[TCPPortCount].events = POLLIN;
             ++TCPPortCount;
+            clientNameMap.insert(make_pair(port, ""));
         }
+        backendNameList.reserve(backendAddressList.size());
         for (const sockaddr_in &backendAddress: backendAddressList) {
             auto *address = (sockaddr *) &backendAddress;
             Operation o;
-            char buffer[Config::BUFFER_LEN];
-            o.encode(buffer);
-            assert(sendto(UDPSocket, buffer, Config::BUFFER_SIZE, 0,
-                          address, sizeof(backendAddress)) != -1);
-            assert(recvfrom(UDPSocket, buffer, Config::BUFFER_SIZE, 0,
-                            nullptr, nullptr) != -1);
-            maxSerialID = max(maxSerialID, strtol(buffer, nullptr, 10));
+            UDPSendOperation(UDPSocket, address, sizeof(backendAddress), o);
+            backendNameList.emplace_back(UDPReceiveString(UDPSocket));
+            maxSerialID = max(maxSerialID, UDPReceiveLongInt(UDPSocket));
         }
-        //        cout << maxSerialID << endl;
         cout << "The main server is up and running." << endl;
         random_device device;
         mt19937 generator(device());
@@ -207,14 +222,15 @@ public:
                     socklen_t clientAddressSize = sizeof(clientAddressStorage);
                     int TCPSocket = accept(polls[i].fd, clientAddress, &clientAddressSize);
                     assert(TCPSocket != -1);
+                    clientNameMap.at(TCPPortList[i]) = TCPReceiveString(TCPSocket);
                     Operation o = TCPReceiveOperation(TCPSocket);
                     // operation.print();
                     switch (o.getType()) {
                         case Operation::Type::CHECK_WALLET:
-                            checkWallet(UDPSocket, TCPSocket, o);
+                            checkWallet(UDPSocket, TCPSocket, TCPPortList[i], o);
                             break;
                         case Operation::Type::TXCOINS:
-                            TXCoins(UDPSocket, TCPSocket, o, distribution(generator));
+                            TXCoins(UDPSocket, TCPSocket, TCPPortList[i], o, distribution(generator));
                             break;
                         case Operation::Type::TXLIST:
                             TXList(UDPSocket, TCPSocket, o);

@@ -9,14 +9,20 @@
 
 template<class T>
 void UDPSendPrimitive(int senderSocket, sockaddr *receiverAddress,
-                      socklen_t receiverAddressSize, T t) {
+                      socklen_t receiverAddressSize, const T &t) {
     string s = to_string(t);
     assert(sendto(senderSocket, s.c_str(), sizeof(s.c_str()), 0,
                   receiverAddress, receiverAddressSize) != -1);
 }
 
+void UDPSendPrimitive(int senderSocket, sockaddr *receiverAddress,
+                      socklen_t receiverAddressSize, const string &s) {
+    assert(sendto(senderSocket, s.c_str(), sizeof(s.c_str()), 0,
+                  receiverAddress, receiverAddressSize) != -1);
+}
+
 template<class T>
-void TCPSendPrimitive(int senderSocket, T t) {
+void TCPSendPrimitive(int senderSocket, const T &t) {
     string s = to_string(t);
     assert(send(senderSocket, s.c_str(), sizeof(s.c_str()), 0) != -1);
 }
@@ -29,10 +35,24 @@ long int UDPReceiveLongInt(int receiverSocket, sockaddr *senderAddress = nullptr
     return strtol(buffer, nullptr, 10);
 }
 
+string UDPReceiveString(int receiverSocket, sockaddr *senderAddress = nullptr,
+                        socklen_t *senderAddressSize = nullptr) {
+    char buffer[Config::BUFFER_LEN];
+    assert(recvfrom(receiverSocket, buffer, Config::BUFFER_SIZE, 0,
+                    senderAddress, senderAddressSize) != -1);
+    return buffer;
+}
+
 long int TCPReceiveLongInt(int receiverSocket) {
     char buffer[Config::BUFFER_LEN];
     assert(recv(receiverSocket, buffer, Config::BUFFER_SIZE, 0) != -1);
     return strtol(buffer, nullptr, 10);
+}
+
+string TCPReceiveString(int receiverSocket) {
+    char buffer[Config::BUFFER_LEN];
+    assert(recv(receiverSocket, buffer, Config::BUFFER_SIZE, 0) != -1);
+    return buffer;
 }
 
 void UDPSendOperation(int senderSocket, sockaddr *receiverAddress,
