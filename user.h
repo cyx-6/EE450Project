@@ -5,52 +5,34 @@
 #include <utility>
 
 #include "config.h"
+#include "utils.h"
 
 using namespace std;
 
 class User {
 public:
-    explicit User(long int ranking, string userName, long int transactionNumber,
-                  long int balance) :
+    explicit User(int ranking, string userName, int transactionNumber,
+                  int balance) :
             ranking(ranking), userName(std::move(userName)),
             transactionNumber(transactionNumber),
             balance(balance), initialBalanceAdded(false) {}
 
-    explicit User(const char *u) {
-        char s[strlen(u)];
-        strcpy(s, u);
-        cout << "fff" << string(u) << endl;
-        cout << "ggg" << string(s) << endl;
-        char *token = strtok(s, Config::SEPARATOR);
-        assert(token != nullptr);
-        ranking = strtol(token, nullptr, 10);
-        token = strtok(nullptr, Config::SEPARATOR);
-        assert(token != nullptr);
-        userName = string(token);
-        token = strtok(nullptr, Config::SEPARATOR);
-        assert(token != nullptr);
-        transactionNumber = strtol(token, nullptr, 10);
-        token = strtok(nullptr, Config::SEPARATOR);
-        assert(token != nullptr);
-        balance = strtol(token, nullptr, 10);
-        token = strtok(nullptr, Config::SEPARATOR);
-        assert(token != nullptr);
-        initialBalanceAdded = strtol(token, nullptr, 10);
-        token = strtok(nullptr, Config::SEPARATOR);
-        assert(token == nullptr);
+    explicit User(const string& s) {
+        vector<string> v = stringToList(s);
+        cout << s << endl;
+        for (string ss: v) cout << ss << endl;
+        assert(v.size() == 5);
+        ranking = stoi(v[0]);
+        userName = v[1];
+        transactionNumber = stoi(v[2]);
+        balance = stoi(v[3]);
+        initialBalanceAdded = stoi(v[4]);
     }
 
     string toString() const {
-        return to_string(ranking) + Config::SEPARATOR + userName + Config::SEPARATOR +
-               to_string(transactionNumber) + Config::SEPARATOR + to_string(balance) +
-               Config::SEPARATOR + to_string(initialBalanceAdded);
+        return listToString({to_string(ranking), userName, to_string(transactionNumber),
+                             to_string(balance), to_string(initialBalanceAdded)});
     }
-
-//    int encode(char *buffer) const {
-//        string s = toString();
-//        strcpy(buffer, s.c_str());
-//        return 0;
-//    }
 
     void merge(const User &u) {
         transactionNumber += u.transactionNumber;
@@ -61,7 +43,7 @@ public:
         return userName;
     }
 
-    void setRanking(long int r) {
+    void setRanking(int r) {
         ranking = r;
     }
 
@@ -87,17 +69,17 @@ public:
 
     void transfer(User &u, const Operation &o) {
         assert(transferable(o));
-        long int t = o.getTransferAmount();
+        int t = o.getTransferAmount();
         balance -= t;
         u.balance += t;
     }
 
-    long int currentBalance() const {
+    int currentBalance() const {
         return initialBalanceAdded ? balance : (balance + Config::INITIAL_BALANCE);
     }
 
 private:
-    long int ranking, transactionNumber, balance;
+    int ranking, transactionNumber, balance;
     string userName;
     bool initialBalanceAdded;
 };

@@ -77,7 +77,7 @@ private:
         return 0;
     }
 
-    long int load() {
+    int load() {
         ifstream file(fileName);
         int n = 0;
         while (file.peek() != EOF) {
@@ -85,10 +85,11 @@ private:
             getline(file, s);
             replace(s.begin(), s.end(), ' ', Config::SEPARATOR[0]);
             if (s.empty()) break;
-            Transaction t(s.c_str());
+            s.append(Config::SEPARATOR);
+            Transaction t(s);
             transactions.emplace_back(t);
             string userName1 = t.getUserName1(), userName2 = t.getUserName2();
-            long int transferAmount = t.getTransferAmount();
+            int transferAmount = t.getTransferAmount();
             if (!users.count(userName1))
                 users.insert(make_pair(userName1, User(0, userName1, 0, 0)));
             users.at(userName1).merge(User(0, userName1, 1, -transferAmount));

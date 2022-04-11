@@ -78,10 +78,11 @@ public:
 
     static void stats(int clientSocket, const string &userName) {
         cout << userName + " sent a statistics enquiry request to the main server." << endl;
-        long int n = TCPReceiveLongInt(clientSocket);
+        int n = TCPReceiveInt(clientSocket);
         vector<User> users;
         users.reserve(n);
         for (int i = 0; i < n; ++i) {
+            TCPSendPrimitive(clientSocket, i + 1);
             User u = TCPReceiveObject<User>(clientSocket);
             users.emplace_back(u);
         }
@@ -111,6 +112,7 @@ public:
         }
         Operation o(argc, argv);
         TCPSendPrimitive(clientSocket, clientName);
+        assert(TCPReceiveString(clientSocket) == clientName);
         TCPSendObject(clientSocket, o);
         switch (o.getType()) {
             case Operation::Type::CHECK_WALLET:

@@ -36,7 +36,7 @@ private:
     vector<sockaddr_in> backendAddressList;
     vector<string> backendNameList;
     unordered_map<uint16_t, string> clientNameMap;
-    long int maxSerialID;
+    int maxSerialID;
 
     static void sigchld_handler(int s) {
         int saved_errno = errno;
@@ -109,7 +109,7 @@ private:
             socklen_t addressSize = sizeof(backendAddress);
             UDPSendObject(UDPSocket, address,
                           addressSize, o);
-            long int n = UDPReceiveLongInt(UDPSocket);
+            int n = UDPReceiveInt(UDPSocket);
             for (int i = 0; i < n; ++i)
                 transactions.emplace_back(UDPReceiveObject<Transaction>(UDPSocket));
         }
@@ -144,7 +144,7 @@ private:
             cout << "The main server sent a request to server " + backendNameList[k] << "." << endl;
             o.setSerialID(maxSerialID);
             UDPSendObject(UDPSocket, address, addressSize, o);
-            assert(UDPReceiveLongInt(UDPSocket) == maxSerialID);
+            assert(UDPReceiveInt(UDPSocket) == maxSerialID);
             cout << "The main server received the feedback from server " + backendNameList[k] +
                             " using UDP over port " + to_string(backendPortList[k]) << "." << endl;
             ++maxSerialID;
@@ -164,7 +164,7 @@ private:
             socklen_t addressSize = sizeof(backendAddress);
             UDPSendObject(UDPSocket, address,
                           addressSize, o);
-            long int n = UDPReceiveLongInt(UDPSocket, nullptr, nullptr);
+            int n = UDPReceiveInt(UDPSocket, nullptr, nullptr);
             for (int i = 0; i < n; ++i) {
                 User u = UDPReceiveObject<User>(UDPSocket, nullptr,
                                                 nullptr);
@@ -182,6 +182,7 @@ private:
         TCPSendPrimitive(TCPSocket, n);
         for (int i = 0; i < n; ++i) {
             v[i].setRanking(i + 1);
+            assert(TCPReceiveInt(TCPSocket) == i + 1);
             TCPSendObject(TCPSocket, v[i]);
         }
         return 0;
@@ -222,7 +223,7 @@ public:
             UDPSendObject(UDPSocket, address,
                           sizeof(backendAddress), o);
             backendNameList.emplace_back(UDPReceiveString(UDPSocket));
-            maxSerialID = max(maxSerialID, UDPReceiveLongInt(UDPSocket));
+            maxSerialID = max(maxSerialID, UDPReceiveInt(UDPSocket));
         }
         cout << "The main server is up and running." << endl;
         random_device device;
@@ -238,6 +239,7 @@ public:
                     int TCPSocket = accept(polls[i].fd, clientAddress, &clientAddressSize);
                     assert(TCPSocket != -1);
                     clientNameMap.at(TCPPortList[i]) = TCPReceiveString(TCPSocket);
+                    TCPSendPrimitive(TCPSocket, clientNameMap.at(TCPPortList[i]));
                     Operation o = TCPReceiveObject<Operation>(TCPSocket);
                     switch (o.getType()) {
                         case Operation::Type::CHECK_WALLET:
