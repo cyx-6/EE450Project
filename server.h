@@ -96,7 +96,8 @@ private:
                           addressSize, o);
             u.merge(UDPReceiveObject<User>(UDPSocket));
             cout << "The main server received transactions from Server " + backendNameList[k] +
-                            " using UDP over port " + to_string(backendPortList[k]) << "." << endl;
+                            " using UDP over port " + to_string(backendPortList[k])
+                 << "." << endl;
             ++k;
         }
         return u;
@@ -116,7 +117,7 @@ private:
         sort(transactions.begin(), transactions.end(), Transaction::comp);
         ofstream file(Config::TXLIST_FILE);
         file << "Serial No.\tSender\tReceiver\tTransfer Amount" << endl;
-        for (const Transaction &t : transactions)
+        for (const Transaction &t: transactions)
             file << t.toString() << endl;
         file.close();
         return 0;
@@ -124,7 +125,8 @@ private:
 
     int checkWallet(int UDPSocket, int TCPSocket, uint16_t port, const Operation &o) {
         cout << "The main server received input=" + o.getUserName1() +
-                        " from the client using TCP over port " + to_string(port) + "." << endl;
+                        " from the client using TCP over port " + to_string(port) + "."
+             << endl;
         User u = getUserInfo(UDPSocket, o);
         if (u.exist()) u.addInitialBalance();
         TCPSendObject(TCPSocket, u);
@@ -136,7 +138,8 @@ private:
         pair<Operation, Operation> p = o.toSubOperation();
         cout << "The main server received from " + o.getUserName1() + " to transfer " +
                         to_string(o.getTransferAmount()) + " coins to " +
-                        o.getUserName2() + " using TCP over port " + to_string(port) + "." << endl;
+                        o.getUserName2() + " using TCP over port " + to_string(port) + "."
+             << endl;
         User u = getUserInfo(UDPSocket, p.first), v = getUserInfo(UDPSocket, p.second);
         if (u.exist() and v.exist() and u.transferable(o)) {
             auto *address = (sockaddr *) &backendAddressList[k];
@@ -146,7 +149,8 @@ private:
             UDPSendObject(UDPSocket, address, addressSize, o);
             assert(UDPReceiveInt(UDPSocket) == maxSerialID);
             cout << "The main server received the feedback from server " + backendNameList[k] +
-                            " using UDP over port " + to_string(backendPortList[k]) << "." << endl;
+                            " using UDP over port " + to_string(backendPortList[k])
+                 << "." << endl;
             ++maxSerialID;
         }
         if (u.exist()) u.addInitialBalance();
@@ -231,7 +235,7 @@ public:
         cout << "The main server is up and running." << endl;
         random_device device;
         mt19937 generator(device());
-        uniform_int_distribution<size_t> distribution(0,backendPortList.size() - 1);
+        uniform_int_distribution<size_t> distribution(0, backendPortList.size() - 1);
         while (true) {
             assert(poll(polls, TCPPortCount, -1) != -1);
             for (int i = 0; i < TCPPortCount; ++i) {

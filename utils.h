@@ -48,7 +48,7 @@ string TCPReceiveString(int receiverSocket) {
 }
 
 int UDPReceiveInt(int receiverSocket, sockaddr *senderAddress = nullptr,
-                           socklen_t *senderAddressSize = nullptr) {
+                  socklen_t *senderAddressSize = nullptr) {
     string s = UDPReceiveString(receiverSocket, senderAddress, senderAddressSize);
     return stoi(s);
 }
@@ -59,7 +59,7 @@ int TCPReceiveInt(int receiverSocket) {
 }
 
 
-template <class T>
+template<class T>
 void UDPSendObject(int senderSocket, sockaddr *receiverAddress,
                    socklen_t receiverAddressSize, const T &t) {
     string s = t.toString();
@@ -67,14 +67,14 @@ void UDPSendObject(int senderSocket, sockaddr *receiverAddress,
     UDPSendPrimitive(senderSocket, receiverAddress, receiverAddressSize, s);
 }
 
-template <class T>
+template<class T>
 void TCPSendObject(int senderSocket, const T &t) {
     string s = t.toString();
     cout << "TCP send: " << s << " " << s.length() << endl;
     TCPSendPrimitive(senderSocket, s);
 }
 
-template <class T>
+template<class T>
 T UDPReceiveObject(int receiverSocket, sockaddr *senderAddress = nullptr,
                    socklen_t *senderAddressSize = nullptr) {
     string s = UDPReceiveString(receiverSocket, senderAddress, senderAddressSize);
@@ -82,7 +82,7 @@ T UDPReceiveObject(int receiverSocket, sockaddr *senderAddress = nullptr,
     return T(s);
 }
 
-template <class T>
+template<class T>
 T TCPReceiveObject(int receiverSocket) {
     string s = TCPReceiveString(receiverSocket);
     cout << "TCP receive: " << s << " " << s.length() << endl;
@@ -91,12 +91,12 @@ T TCPReceiveObject(int receiverSocket) {
 
 string listToString(const vector<string> &v) {
     string a;
-    for (const string &s : v)
+    for (const string &s: v)
         a.append(s + Config::SEPARATOR);
     return a;
 }
 
-vector<string> stringToList(const string& s) {
+vector<string> stringToList(const string &s) {
     vector<string> v;
     string c = s;
     size_t p = c.find(Config::SEPARATOR);

@@ -37,15 +37,18 @@ public:
         User u = TCPReceiveObject<User>(clientSocket);
         if (u.exist())
             cout << "The current balance of " + userName + " is : " +
-                            to_string(u.currentBalance()) + " alicoins." << endl;
+                            to_string(u.currentBalance()) + " alicoins."
+                 << endl;
         else
             cout << "“Unable to proceed with the balance enquiry request as " + userName +
-                    " is not part of the network." << endl;
+                            " is not part of the network."
+                 << endl;
     };
 
-    static void TXCoins(int clientSocket, const Operation& o) {
+    static void TXCoins(int clientSocket, const Operation &o) {
         cout << o.getUserName1() + " has requested to transfer" + to_string(o.getTransferAmount()) +
-                        " coins to " + o.getUserName2() << "." << endl;
+                        " coins to " + o.getUserName2()
+             << "." << endl;
         assert(TCPReceiveInt(clientSocket) == 2);
         TCPSendPrimitive(clientSocket, o.getUserName1());
         User u = TCPReceiveObject<User>(clientSocket);
@@ -54,24 +57,28 @@ public:
         if (!u.exist() && !v.exist())
             cout << "Unable to proceed with the transaction as " +
                             o.getUserName1() + " and " + o.getUserName2() +
-                            " are not part of the network." << endl;
+                            " are not part of the network."
+                 << endl;
         else if (!u.exist() || !v.exist())
             cout << "Unable to proceed with the transaction as " +
                             (u.exist() ? o.getUserName2() : o.getUserName1()) +
-                            " is not part of the network." << endl;
+                            " is not part of the network."
+                 << endl;
         else if (!u.transferable(o))
             cout << o.getUserName1() + " was unable to transfer " +
                             to_string(o.getTransferAmount()) + " alicoins to" +
                             o.getUserName2() + " because of insufficient balance. The current balance of " +
                             o.getUserName1() + " is : " + to_string(u.currentBalance()) +
-                            " alicoins." << endl;
+                            " alicoins."
+                 << endl;
         else {
             u.transfer(v, o);
             cout << o.getUserName1() + " successfully transferred " +
                             to_string(o.getTransferAmount()) + " alicoins to" +
                             o.getUserName2() + ". The current balance of " +
                             o.getUserName1() + " is :" + to_string(u.currentBalance()) +
-                            " alicoins." << endl;
+                            " alicoins."
+                 << endl;
         }
     };
 
@@ -89,11 +96,10 @@ public:
             User u = TCPReceiveObject<User>(clientSocket);
             users.emplace_back(u);
         }
-        cout << userName + " statistics are the following.:" << endl <<
-                "Rank--Username--NumofTransacions--Total" << endl;
-        for (const User &u : users)
+        cout << userName + " statistics are the following.:" << endl
+             << "Rank--Username--NumofTransacions--Total" << endl;
+        for (const User &u: users)
             cout << u.toString() << endl;
-
     };
 
     int run(int argc, char **argv) {

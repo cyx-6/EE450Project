@@ -11,10 +11,10 @@ using namespace std;
 
 class User {
 public:
-    explicit User(const string& s) {
+    explicit User(const string &s) {
         vector<string> v = stringToList(s);
-//        cout << s << endl;
-//        for (string ss: v) cout << ss << endl;
+        //        cout << s << endl;
+        //        for (string ss: v) cout << ss << endl;
         assert(v.size() == 5);
         ranking = stoi(v[0]);
         userName = v[1];
@@ -23,7 +23,7 @@ public:
         initialBalanceAdded = stoi(v[4]);
     }
 
-    static User initialUser(const string& username, int transactionNumber = 0, int balance = 0) {
+    static User initialUser(const string &username, int transactionNumber = 0, int balance = 0) {
         return User(0, username, transactionNumber, balance);
     }
 
@@ -61,8 +61,7 @@ public:
     }
 
     bool transferable(const Operation &o) const {
-        return initialBalanceAdded ? (balance >= o.getTransferAmount()) :
-                                   (balance + Config::INITIAL_BALANCE >= o.getTransferAmount());
+        return initialBalanceAdded ? (balance >= o.getTransferAmount()) : (balance + Config::INITIAL_BALANCE >= o.getTransferAmount());
     }
 
     void transfer(User &u, const Operation &o) {
@@ -89,4 +88,4 @@ private:
     bool initialBalanceAdded;
 };
 
-#endif //USER_H
+#endif//USER_H

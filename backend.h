@@ -77,7 +77,7 @@ private:
         sort(v.begin(), v.end(), User::comp);
         UDPSendPrimitive(backendSocket, serverAddress,
                          serverAddressSize, v.size());
-        for (const User &u : v)
+        for (const User &u: v)
             UDPSendObject(backendSocket, serverAddress,
                           serverAddressSize, u);
         return 0;

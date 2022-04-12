@@ -9,7 +9,11 @@ using namespace std;
 class Operation {
 public:
     enum Type {
-        NONE = 0, CHECK_WALLET, TXCOINS, TXLIST, STATS
+        NONE = 0,
+        CHECK_WALLET,
+        TXCOINS,
+        TXLIST,
+        STATS
     };
 
     Operation() = default;
@@ -129,8 +133,7 @@ private:
     Type type = NONE;
     string userName1, userName2;
     int transferAmount = 0, serialID = 0;
-
 };
 
 
-#endif //OPERATION_H
+#endif//OPERATION_H
