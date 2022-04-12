@@ -50,7 +50,7 @@ private:
 
     int checkWallet(int backendSocket, sockaddr *serverAddress, socklen_t serverAddressSize, const Operation &o) {
         string userName1 = o.getUserName1();
-        User u(0, userName1, 0, 0);
+        User u = User::initialUser(o.getUserName1());
         if (users.count(userName1)) u.merge(users.at(userName1));
         UDPSendObject(backendSocket, serverAddress,
                       serverAddressSize, u);
@@ -58,8 +58,14 @@ private:
     }
 
     int TXCoins(int backendSocket, sockaddr *serverAddress, socklen_t serverAddressSize, const Operation &o) {
+        string userName1 = o.getUserName1(), userName2 = o.getUserName2();
         Transaction t(o.toTransaction());
         transactions.emplace_back(t);
+        if (!users.count(userName1))
+            users.insert(make_pair(userName1, User::initialUser(userName1)));
+        if (!users.count(userName2))
+            users.insert(make_pair(userName2, User::initialUser(userName2)));
+        users.at(userName1).transfer(users.at(userName2), o);
         UDPSendPrimitive(backendSocket, serverAddress, serverAddressSize, t.getSerialID());
         return 0;
     }
@@ -83,19 +89,19 @@ private:
         while (file.peek() != EOF) {
             string s;
             getline(file, s);
-            replace(s.begin(), s.end(), ' ', Config::SEPARATOR[0]);
+            replace(s.begin(), s.end(), ' ', char(Config::SEPARATOR));
             if (s.empty()) break;
-            s.append(Config::SEPARATOR);
+            s.push_back(Config::SEPARATOR);
             Transaction t(s);
             transactions.emplace_back(t);
             string userName1 = t.getUserName1(), userName2 = t.getUserName2();
             int transferAmount = t.getTransferAmount();
             if (!users.count(userName1))
-                users.insert(make_pair(userName1, User(0, userName1, 0, 0)));
-            users.at(userName1).merge(User(0, userName1, 1, -transferAmount));
+                users.insert(make_pair(userName1, User::initialUser(userName1)));
+            users.at(userName1).merge(User::initialUser(userName1, 1, -transferAmount));
             if (!users.count(userName2))
-                users.insert(make_pair(userName2, User(0, userName2, 0, 0)));
-            users.at(userName2).merge(User(0, userName2, 1, transferAmount));
+                users.insert(make_pair(userName2, User::initialUser(userName2)));
+            users.at(userName2).merge(User::initialUser(userName2, 1, transferAmount));
             ++n;
         }
         sort(transactions.begin(), transactions.end(), Transaction::comp);

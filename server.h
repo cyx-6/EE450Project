@@ -86,7 +86,7 @@ private:
     }
 
     User getUserInfo(int UDPSocket, const Operation &o) {
-        User u(0, o.getUserName1(), 0, 0);
+        User u = User::initialUser(o.getUserName1());
         int k = 0;
         for (sockaddr_in backendAddress: backendAddressList) {
             cout << "The main server sent a request to server " + backendNameList[k] << "." << endl;
@@ -173,7 +173,7 @@ private:
                                                 nullptr);
                 string userName = u.getUserName();
                 if (!users.count(userName))
-                    users.insert(make_pair(userName, User(0, userName, 0, 0)));
+                    users.insert(make_pair(userName, User::initialUser(userName)));
                 users.at(userName).merge(u);
             }
         }

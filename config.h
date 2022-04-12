@@ -9,7 +9,8 @@ public:
     static const int INITIAL_BALANCE = 1000;
     static constexpr const char *LOCALHOST = "127.0.0.1";
     static constexpr const char *TXLIST_FILE = "alichain.txt";
-    static constexpr const char *SEPARATOR = "|";
+//    static constexpr const char *SEPARATOR = "|";
+    static const char SEPARATOR = '|';
 };
 
 

@@ -11,22 +11,20 @@ using namespace std;
 
 class User {
 public:
-    explicit User(int ranking, string userName, int transactionNumber,
-                  int balance) :
-            ranking(ranking), userName(std::move(userName)),
-            transactionNumber(transactionNumber),
-            balance(balance), initialBalanceAdded(false) {}
-
     explicit User(const string& s) {
         vector<string> v = stringToList(s);
-        cout << s << endl;
-        for (string ss: v) cout << ss << endl;
+//        cout << s << endl;
+//        for (string ss: v) cout << ss << endl;
         assert(v.size() == 5);
         ranking = stoi(v[0]);
         userName = v[1];
         transactionNumber = stoi(v[2]);
         balance = stoi(v[3]);
         initialBalanceAdded = stoi(v[4]);
+    }
+
+    static User initialUser(const string& username, int transactionNumber = 0, int balance = 0) {
+        return User(0, username, transactionNumber, balance);
     }
 
     string toString() const {
@@ -71,7 +69,9 @@ public:
         assert(transferable(o));
         int t = o.getTransferAmount();
         balance -= t;
+        ++transactionNumber;
         u.balance += t;
+        ++u.transactionNumber;
     }
 
     int currentBalance() const {
@@ -79,6 +79,11 @@ public:
     }
 
 private:
+    explicit User(int ranking, string userName,
+                  int transactionNumber, int balance) : ranking(ranking), userName(std::move(userName)),
+                                                        transactionNumber(transactionNumber),
+                                                        balance(balance), initialBalanceAdded(false) {}
+
     int ranking, transactionNumber, balance;
     string userName;
     bool initialBalanceAdded;

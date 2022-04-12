@@ -43,30 +43,27 @@ public:
     explicit Operation(const string &s) {
         vector<string> v = stringToList(s);
         assert(!v.empty() && v[0].length() == 1);
-        switch (v[0][0]) {
-            case '0':
+        type = static_cast<Type>(stoi(v[0]));
+        switch (type) {
+            case NONE:
                 assert(v.size() == 1);
                 return;
-            case '1':
+            case CHECK_WALLET:
                 assert(v.size() == 2);
-                type = CHECK_WALLET;
                 userName1 = v[1];
                 return;
-            case '2':
+            case TXCOINS:
                 assert(v.size() == 5);
-                type = TXCOINS;
                 userName1 = v[1];
                 userName2 = v[2];
                 transferAmount = stoi(v[3]);
                 serialID = stoi(v[4]);
                 return;
-            case '3':
+            case TXLIST:
                 assert(v.size() == 1);
-                type = TXLIST;
                 return;
-            case '4':
+            case STATS:
                 assert(v.size() == 2);
-                type = STATS;
                 userName1 = v[1];
                 return;
             default:
@@ -127,12 +124,6 @@ public:
                 assert(false);
         }
     }
-
-//    int encode(char *buffer) const {
-//        string s = toString();
-//        strcpy(buffer, s.c_str());
-//        return 0;
-//    }
 
 private:
     Type type = NONE;

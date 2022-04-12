@@ -49,8 +49,6 @@ string TCPReceiveString(int receiverSocket) {
 
 int UDPReceiveInt(int receiverSocket, sockaddr *senderAddress = nullptr,
                            socklen_t *senderAddressSize = nullptr) {
-
-    char buffer[Config::BUFFER_LEN];
     string s = UDPReceiveString(receiverSocket, senderAddress, senderAddressSize);
     return stoi(s);
 }
@@ -66,8 +64,6 @@ void UDPSendObject(int senderSocket, sockaddr *receiverAddress,
                    socklen_t receiverAddressSize, const T &t) {
     string s = t.toString();
     cout << "UDP send: " << s << " " << s.length() << endl;
-//    assert(sendto(senderSocket, s.c_str(), s.length(), 0,
-//                  receiverAddress, receiverAddressSize) != -1);
     UDPSendPrimitive(senderSocket, receiverAddress, receiverAddressSize, s);
 }
 
@@ -75,16 +71,12 @@ template <class T>
 void TCPSendObject(int senderSocket, const T &t) {
     string s = t.toString();
     cout << "TCP send: " << s << " " << s.length() << endl;
-//    assert(send(senderSocket, s.c_str(), s.length(), 0) != -1);
     TCPSendPrimitive(senderSocket, s);
 }
 
 template <class T>
 T UDPReceiveObject(int receiverSocket, sockaddr *senderAddress = nullptr,
                    socklen_t *senderAddressSize = nullptr) {
-//    char buffer[Config::BUFFER_LEN];
-//    assert(recvfrom(receiverSocket, buffer, Config::BUFFER_SIZE, 0,
-//                    senderAddress, senderAddressSize) != -1);
     string s = UDPReceiveString(receiverSocket, senderAddress, senderAddressSize);
     cout << "UDP receive: " << s << " " << s.length() << endl;
     return T(s);
@@ -92,8 +84,6 @@ T UDPReceiveObject(int receiverSocket, sockaddr *senderAddress = nullptr,
 
 template <class T>
 T TCPReceiveObject(int receiverSocket) {
-//    char buffer[Config::BUFFER_LEN];
-//    assert(recv(receiverSocket, buffer, Config::BUFFER_SIZE, 0) != -1);
     string s = TCPReceiveString(receiverSocket);
     cout << "TCP receive: " << s << " " << s.length() << endl;
     return T(s);
@@ -109,10 +99,10 @@ string listToString(const vector<string> &v) {
 vector<string> stringToList(const string& s) {
     vector<string> v;
     string c = s;
-    size_t p = c.find(Config::SEPARATOR), n = strlen(Config::SEPARATOR);
+    size_t p = c.find(Config::SEPARATOR);
     while (p != string::npos) {
         v.emplace_back(c.substr(0, p));
-        c.erase(0, p + n);
+        c.erase(0, p + 1);
         p = c.find(Config::SEPARATOR);
     }
     return v;
