@@ -151,7 +151,10 @@ private:
         }
         if (u.exist()) u.addInitialBalance();
         if (v.exist()) v.addInitialBalance();
+        TCPSendPrimitive(TCPSocket, 2);
+        assert(TCPReceiveString(TCPSocket) == o.getUserName1());
         TCPSendObject(TCPSocket, u);
+        assert(TCPReceiveString(TCPSocket) == o.getUserName2());
         TCPSendObject(TCPSocket, v);
         cout << "The main server sent the result of the transaction to client " << clientNameMap.at(port) << "." << endl;
         return 0;

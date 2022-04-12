@@ -46,8 +46,11 @@ public:
     static void TXCoins(int clientSocket, const Operation& o) {
         cout << o.getUserName1() + " has requested to transfer" + to_string(o.getTransferAmount()) +
                         " coins to " + o.getUserName2() << "." << endl;
-        User u = TCPReceiveObject<User>(clientSocket),
-                v = TCPReceiveObject<User>(clientSocket);
+        assert(TCPReceiveInt(clientSocket) == 2);
+        TCPSendPrimitive(clientSocket, o.getUserName1());
+        User u = TCPReceiveObject<User>(clientSocket);
+        TCPSendPrimitive(clientSocket, o.getUserName2());
+        User v = TCPReceiveObject<User>(clientSocket);
         if (!u.exist() && !v.exist())
             cout << "Unable to proceed with the transaction as " +
                             o.getUserName1() + " and " + o.getUserName2() +
