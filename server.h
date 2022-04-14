@@ -37,6 +37,7 @@ private:
     vector<string> backendNameList;
     unordered_map<uint16_t, string> clientNameMap;
     int maxSerialID;
+    bool initialized;
 
     static void sigchld_handler(int s) {
         int saved_errno = errno;
@@ -195,6 +196,19 @@ private:
         return 0;
     }
 
+    int UDPInitialization(int UDPSocket) {
+        backendNameList.reserve(backendAddressList.size());
+        for (const sockaddr_in &backendAddress: backendAddressList) {
+            auto *address = (sockaddr *) &backendAddress;
+            Operation o;
+            UDPSendObject(UDPSocket, address,
+                          sizeof(backendAddress), o);
+            backendNameList.emplace_back(UDPReceiveString(UDPSocket));
+            maxSerialID = max(maxSerialID, UDPReceiveInt(UDPSocket));
+        }
+        return 0;
+    }
+
 public:
     explicit Server(const vector<uint16_t> &TCPPortList,
                     uint16_t UDPPort,
@@ -211,6 +225,7 @@ public:
             backendAddress.sin_addr.s_addr = inet_addr(Config::LOCALHOST);
             backendAddressList.emplace_back(backendAddress);
         }
+        initialized = false;
     }
 
     void start() {
@@ -222,15 +237,6 @@ public:
             polls[TCPPortCount].events = POLLIN;
             ++TCPPortCount;
             clientNameMap.insert(make_pair(port, ""));
-        }
-        backendNameList.reserve(backendAddressList.size());
-        for (const sockaddr_in &backendAddress: backendAddressList) {
-            auto *address = (sockaddr *) &backendAddress;
-            Operation o;
-            UDPSendObject(UDPSocket, address,
-                          sizeof(backendAddress), o);
-            backendNameList.emplace_back(UDPReceiveString(UDPSocket));
-            maxSerialID = max(maxSerialID, UDPReceiveInt(UDPSocket));
         }
         cout << "The main server is up and running." << endl;
         random_device device;
@@ -248,6 +254,10 @@ public:
                     clientNameMap.at(TCPPortList[i]) = TCPReceiveString(TCPSocket);
                     TCPSendPrimitive(TCPSocket, clientNameMap.at(TCPPortList[i]));
                     Operation o = TCPReceiveObject<Operation>(TCPSocket);
+                    if (!initialized) {
+                        UDPInitialization(UDPSocket);
+                        initialized = true;
+                    }
                     switch (o.getType()) {
                         case Operation::Type::CHECK_WALLET:
                             checkWallet(UDPSocket, TCPSocket, TCPPortList[i], o);

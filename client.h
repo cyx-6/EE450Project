@@ -12,7 +12,6 @@
 #include <unistd.h>
 #include <utility>
 #include <vector>
-//#include <utility>
 
 #include "config.h"
 #include "operation.h"
@@ -66,7 +65,7 @@ public:
                  << endl;
         else if (!u.transferable(o))
             cout << o.getUserName1() + " was unable to transfer " +
-                            to_string(o.getTransferAmount()) + " alicoins to" +
+                            to_string(o.getTransferAmount()) + " alicoins to " +
                             o.getUserName2() + " because of insufficient balance. The current balance of " +
                             o.getUserName1() + " is : " + to_string(u.currentBalance()) +
                             " alicoins."

@@ -13,8 +13,6 @@ class User {
 public:
     explicit User(const string &s) {
         vector<string> v = stringToList(s);
-        //        cout << s << endl;
-        //        for (string ss: v) cout << ss << endl;
         assert(v.size() == 5);
         ranking = stoi(v[0]);
         userName = v[1];
