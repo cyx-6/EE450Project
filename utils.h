@@ -1,6 +1,7 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+#include <cstring>
 
 #include "config.h"
 
@@ -106,6 +107,15 @@ vector<string> stringToList(const string &s) {
         p = c.find(Config::SEPARATOR);
     }
     return v;
+}
+
+sockaddr_in socketAddress(uint16_t port) {
+    sockaddr_in address{};
+    memset(&address, 0, sizeof(address));
+    address.sin_family = AF_INET;
+    address.sin_port = htons(port);
+    address.sin_addr.s_addr = inet_addr(Config::LOCALHOST);
+    return address;
 }
 
 #endif//UTILS_H

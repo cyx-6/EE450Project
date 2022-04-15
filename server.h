@@ -37,7 +37,6 @@ private:
     vector<string> backendNameList;
     unordered_map<uint16_t, string> clientNameMap;
     int maxSerialID;
-    bool initialized;
 
     static void sigchld_handler(int s) {
         int saved_errno = errno;
@@ -48,12 +47,8 @@ private:
 
     static int TCPListener(uint16_t serverPort) {
         int TCPSocket;
-        sockaddr_in serverAddress{};
-        memset(&serverAddress, 0, sizeof(serverAddress));
+        sockaddr_in serverAddress = socketAddress(serverPort);
         int yes = 1;
-        serverAddress.sin_family = AF_INET;
-        serverAddress.sin_port = htons(serverPort);
-        serverAddress.sin_addr.s_addr = inet_addr(Config::LOCALHOST);
         TCPSocket = socket(serverAddress.sin_family, SOCK_STREAM, 0);
         assert(TCPSocket != -1);
         assert(setsockopt(TCPSocket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) != -1);
@@ -74,11 +69,7 @@ private:
 
     static int UDPSender(uint16_t serverPort) {
         int UDPSocket;
-        sockaddr_in serverAddress{};
-        memset(&serverAddress, 0, sizeof(serverAddress));
-        serverAddress.sin_family = AF_INET;
-        serverAddress.sin_port = htons(serverPort);
-        serverAddress.sin_addr.s_addr = inet_addr(Config::LOCALHOST);
+        sockaddr_in serverAddress = socketAddress(serverPort);
         UDPSocket = socket(serverAddress.sin_family, SOCK_DGRAM, 0);
         assert(UDPSocket != -1);
         auto *socketAddress = (sockaddr *) &serverAddress;
@@ -217,15 +208,8 @@ public:
                                                                backendPortList(backendPortList),
                                                                maxSerialID(-1) {
         backendAddressList.reserve(backendPortList.size());
-        for (uint16_t port: backendPortList) {
-            sockaddr_in backendAddress{};
-            memset(&backendAddress, 0, sizeof(backendAddress));
-            backendAddress.sin_family = AF_INET;
-            backendAddress.sin_port = htons(port);
-            backendAddress.sin_addr.s_addr = inet_addr(Config::LOCALHOST);
-            backendAddressList.emplace_back(backendAddress);
-        }
-        initialized = false;
+        for (uint16_t port: backendPortList)
+            backendAddressList.emplace_back(socketAddress(port));
     }
 
     void start() {
@@ -237,6 +221,14 @@ public:
             polls[TCPPortCount].events = POLLIN;
             ++TCPPortCount;
             clientNameMap.insert(make_pair(port, ""));
+        }
+        backendNameList.reserve(backendAddressList.size());
+        for (const sockaddr_in &backendAddress: backendAddressList) {
+            auto *address = (sockaddr *) &backendAddress;
+            backendNameList.emplace_back(UDPReceiveString(UDPSocket));
+            maxSerialID = max(maxSerialID, UDPReceiveInt(UDPSocket));
+            UDPSendPrimitive(UDPSocket, address,
+                             sizeof(backendAddress), maxSerialID);
         }
         cout << "The main server is up and running." << endl;
         random_device device;
@@ -254,10 +246,6 @@ public:
                     clientNameMap.at(TCPPortList[i]) = TCPReceiveString(TCPSocket);
                     TCPSendPrimitive(TCPSocket, clientNameMap.at(TCPPortList[i]));
                     Operation o = TCPReceiveObject<Operation>(TCPSocket);
-                    if (!initialized) {
-                        UDPInitialization(UDPSocket);
-                        initialized = true;
-                    }
                     switch (o.getType()) {
                         case Operation::Type::CHECK_WALLET:
                             checkWallet(UDPSocket, TCPSocket, TCPPortList[i], o);

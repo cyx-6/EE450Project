@@ -101,13 +101,9 @@ public:
             cout << u.toString() << endl;
     };
 
-    int run(int argc, char **argv) {
+    int start(int argc, char **argv) {
         int clientSocket;
-        sockaddr_in serverAddress{};
-        memset(&serverAddress, 0, sizeof(serverAddress));
-        serverAddress.sin_family = AF_INET;
-        serverAddress.sin_port = htons(serverPort);
-        serverAddress.sin_addr.s_addr = inet_addr(Config::LOCALHOST);
+        sockaddr_in serverAddress = socketAddress(serverPort);
         clientSocket = socket(serverAddress.sin_family, SOCK_STREAM, 0);
         assert(clientSocket != -1);
         auto *socketAddress = (sockaddr *) &serverAddress;

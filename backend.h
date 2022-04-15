@@ -26,17 +26,9 @@ using namespace std;
 class Backend {
 private:
     string backendName, fileName;
-    uint16_t backendPort;
+    uint16_t backendPort, serverPort;
     unordered_map<string, User> users;
     vector<Transaction> transactions;
-
-    int backendInfo(int backendSocket, sockaddr *serverAddress, socklen_t serverAddressSize) {
-        UDPSendPrimitive(backendSocket, serverAddress,
-                         serverAddressSize, backendName);
-        UDPSendPrimitive(backendSocket, serverAddress,
-                         serverAddressSize, transactions.back().getSerialID());
-        return 0;
-    }
 
     int TXList(int backendSocket, sockaddr *serverAddress, socklen_t serverAddressSize) {
         UDPSendPrimitive(backendSocket, serverAddress,
@@ -61,11 +53,15 @@ private:
         string userName1 = o.getUserName1(), userName2 = o.getUserName2();
         Transaction t(o.toTransaction());
         transactions.emplace_back(t);
+        pair<User, User> p = User::fromTransaction(t);
         if (!users.count(userName1))
-            users.insert(make_pair(userName1, User::initialUser(userName1)));
+            users.insert(make_pair(userName1, p.first));
+        else
+            users.at(userName1).merge(p.first);
         if (!users.count(userName2))
-            users.insert(make_pair(userName2, User::initialUser(userName2)));
-        users.at(userName1).transfer(users.at(userName2), o);
+            users.insert(make_pair(userName2, p.second));
+        else
+            users.at(userName2).merge(p.second);
         UDPSendPrimitive(backendSocket, serverAddress, serverAddressSize, t.getSerialID());
         return 0;
     }
@@ -95,13 +91,15 @@ private:
             Transaction t(s);
             transactions.emplace_back(t);
             string userName1 = t.getUserName1(), userName2 = t.getUserName2();
-            int transferAmount = t.getTransferAmount();
+            pair<User, User> p = User::fromTransaction(t);
             if (!users.count(userName1))
-                users.insert(make_pair(userName1, User::initialUser(userName1)));
-            users.at(userName1).merge(User::initialUser(userName1, 1, -transferAmount));
+                users.insert(make_pair(userName1, p.first));
+            else
+                users.at(userName1).merge(p.first);
             if (!users.count(userName2))
-                users.insert(make_pair(userName2, User::initialUser(userName2)));
-            users.at(userName2).merge(User::initialUser(userName2, 1, transferAmount));
+                users.insert(make_pair(userName2, p.second));
+            else
+                users.at(userName2).merge(p.second);
             ++n;
         }
         sort(transactions.begin(), transactions.end(), Transaction::comp);
@@ -110,33 +108,32 @@ private:
     }
 
 public:
-    Backend(string backendName, string fileName, uint16_t backendPort) : backendName(std::move(backendName)), fileName(std::move(fileName)),
-                                                                         backendPort(backendPort) {}
+    Backend(string backendName, string fileName,
+            uint16_t backendPort, uint16_t serverPort) : backendName(std::move(backendName)),
+                                                         fileName(std::move(fileName)),
+                                                         backendPort(backendPort),
+                                                         serverPort(serverPort) {}
 
     int start() {
         int backendSocket;
         load();
-        sockaddr_in backendAddress{};
-        memset(&backendAddress, 0, sizeof(backendAddress));
-        backendAddress.sin_family = AF_INET;
-        backendAddress.sin_port = htons(backendPort);
-        backendAddress.sin_addr.s_addr = inet_addr(Config::LOCALHOST);
-        backendSocket = socket(backendAddress.sin_family, SOCK_DGRAM, 0);
+        sockaddr_in backendAddressIn = socketAddress(backendPort);
+        backendSocket = socket(backendAddressIn.sin_family, SOCK_DGRAM, 0);
         assert(backendSocket != -1);
-        auto *socketAddress = (sockaddr *) &backendAddress;
-        assert(bind(backendSocket, socketAddress, sizeof(backendAddress)) != -1);
+        assert(bind(backendSocket, (sockaddr *) &backendAddressIn, sizeof(backendAddressIn)) != -1);
+        sockaddr_in serverAddressIn = socketAddress(serverPort);
+        auto * serverAddress = (sockaddr *) &serverAddressIn;
+        unsigned long serverAddressSize = sizeof(serverAddressIn);
+        UDPSendPrimitive(backendSocket, serverAddress,
+                         serverAddressSize, backendName);
+        UDPSendPrimitive(backendSocket, serverAddress,
+                         serverAddressSize, transactions.back().getSerialID());
+        assert(UDPReceiveInt(backendSocket) >= transactions.back().getSerialID());
         cout << "The Server" + backendName + " is up and running using UDP on port " + to_string(backendPort) << "." << endl;
         while (true) {
-            sockaddr_storage serverAddressStorage{};
-            auto *serverAddress = (sockaddr *) &serverAddressStorage;
-            socklen_t serverAddressSize = sizeof(serverAddressStorage);
-            Operation o = UDPReceiveObject<Operation>(backendSocket, serverAddress,
-                                                      &serverAddressSize);
+            Operation o = UDPReceiveObject<Operation>(backendSocket);
             cout << "The Server" + backendName + " received a request from the Main Server." << endl;
             switch (o.getType()) {
-                case Operation::Type::NONE:
-                    backendInfo(backendSocket, serverAddress, serverAddressSize);
-                    break;
                 case Operation::Type::CHECK_WALLET:
                     checkWallet(backendSocket, serverAddress, serverAddressSize, o);
                     break;
@@ -152,8 +149,7 @@ public:
                 default:
                     assert(false);
             }
-            if (o.getType() != Operation::Type::TXCOINS)
-                cout << "The Server" + backendName + " finished sending the response to the Main Server." << endl;
+            cout << "The Server" + backendName + " finished sending the response to the Main Server." << endl;
         }
         return 0;
     }

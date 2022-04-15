@@ -21,8 +21,8 @@ public:
         initialBalanceAdded = stoi(v[4]);
     }
 
-    static User initialUser(const string &username, int transactionNumber = 0, int balance = 0) {
-        return User(0, username, transactionNumber, balance);
+    static User initialUser(const string &username) {
+        return User(0, username, 0, 0);
     }
 
     string toString() const {
@@ -73,6 +73,12 @@ public:
 
     int currentBalance() const {
         return initialBalanceAdded ? balance : (balance + Config::INITIAL_BALANCE);
+    }
+
+    static pair<User, User> fromTransaction(const Transaction &t) {
+        int d = t.getTransferAmount();
+        return make_pair(User(0, t.getUserName1(), 1, -d),
+                         User(0, t.getUserName2(), 1, d));
     }
 
 private:
