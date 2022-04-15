@@ -122,7 +122,7 @@ public:
         assert(backendSocket != -1);
         assert(bind(backendSocket, (sockaddr *) &backendAddressIn, sizeof(backendAddressIn)) != -1);
         sockaddr_in serverAddressIn = socketAddress(serverPort);
-        auto * serverAddress = (sockaddr *) &serverAddressIn;
+        auto *serverAddress = (sockaddr *) &serverAddressIn;
         unsigned long serverAddressSize = sizeof(serverAddressIn);
         UDPSendPrimitive(backendSocket, serverAddress,
                          serverAddressSize, backendName);
