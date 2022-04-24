@@ -127,13 +127,13 @@ private:
             auto *address = (sockaddr *) &backendAddressList[k];
             socklen_t addressSize = sizeof(backendAddressList[k]);
             cout << "The main server sent a request to server " + backendNameList[k] << "." << endl;
+            ++maxSerialID;
             o.setSerialID(maxSerialID);
             UDPSendObject(UDPSocket, address, addressSize, o);
             assert(UDPReceiveInt(UDPSocket) == maxSerialID);
             cout << "The main server received the feedback from server " + backendNameList[k] +
                             " using UDP over port " + to_string(backendPortList[k])
                  << "." << endl;
-            ++maxSerialID;
         }
         if (u.exist()) u.addInitialBalance();
         if (v.exist()) v.addInitialBalance();

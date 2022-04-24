@@ -9,6 +9,7 @@ using namespace std;
 
 void UDPSendPrimitive(int senderSocket, sockaddr *receiverAddress,
                       socklen_t receiverAddressSize, const string &s) {
+    cout << "\033[32m" << "UDP send: " << s << " (Length: " << s.length() << ")\033[0m" << endl;
     assert(sendto(senderSocket, s.c_str(), s.length(), 0,
                   receiverAddress, receiverAddressSize) != -1);
 }
@@ -21,6 +22,7 @@ void UDPSendPrimitive(int senderSocket, sockaddr *receiverAddress,
 }
 
 void TCPSendPrimitive(int senderSocket, const string &s) {
+    cout << "\033[32m" << "TCP send: " << s << " (Length: " << s.length() << ")\033[0m" << endl;
     assert(send(senderSocket, s.c_str(), s.length(), 0) != -1);
 }
 
@@ -37,7 +39,9 @@ string UDPReceiveString(int receiverSocket, sockaddr *senderAddress = nullptr,
                          senderAddress, senderAddressSize);
     assert(n != -1);
     buffer[n] = '\0';
-    return buffer;
+    string s(buffer);
+    cout << "\033[32m" << "UDP receive: " << s << " (Length: " << s.length() << ")\033[0m" << endl;
+    return s;
 }
 
 string TCPReceiveString(int receiverSocket) {
@@ -45,7 +49,9 @@ string TCPReceiveString(int receiverSocket) {
     ssize_t n = recv(receiverSocket, buffer, Config::BUFFER_SIZE, 0);
     assert(n != -1);
     buffer[n] = '\0';
-    return buffer;
+    string s(buffer);
+    cout << "\033[32m" << "TCP receive: " << s << " (Length: " << s.length() << ")\033[0m" << endl;
+    return s;
 }
 
 int UDPReceiveInt(int receiverSocket, sockaddr *senderAddress = nullptr,
