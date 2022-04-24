@@ -70,14 +70,12 @@ template<class T>
 void UDPSendObject(int senderSocket, sockaddr *receiverAddress,
                    socklen_t receiverAddressSize, const T &t) {
     string s = t.toString();
-    cout << "\033[32m" << "UDP send: " << s << " (Length: " << s.length() << ")\033[0m" << endl;
     UDPSendPrimitive(senderSocket, receiverAddress, receiverAddressSize, s);
 }
 
 template<class T>
 void TCPSendObject(int senderSocket, const T &t) {
     string s = t.toString();
-    cout << "\033[32m" << "TCP send: " << s << " (Length: " << s.length() << ")\033[0m" << endl;
     TCPSendPrimitive(senderSocket, s);
 }
 
@@ -85,14 +83,12 @@ template<class T>
 T UDPReceiveObject(int receiverSocket, sockaddr *senderAddress = nullptr,
                    socklen_t *senderAddressSize = nullptr) {
     string s = UDPReceiveString(receiverSocket, senderAddress, senderAddressSize);
-    cout << "\033[32m" << "UDP receive: " << s << " (Length: " << s.length() << ")\033[0m" << endl;
     return T(s);
 }
 
 template<class T>
 T TCPReceiveObject(int receiverSocket) {
     string s = TCPReceiveString(receiverSocket);
-    cout << "\033[32m" << "TCP receive: " << s << " (Length: " << s.length() << ")\033[0m" << endl;
     return T(s);
 }
 
