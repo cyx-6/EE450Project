@@ -63,6 +63,12 @@ private:
         else
             users.at(userName2).merge(p.second);
         UDPSendPrimitive(backendSocket, serverAddress, serverAddressSize, t.getSerialID());
+        ofstream file(fileName, ios::app);
+        string s = t.toString();
+        replace(s.begin(), s.end(), char(Config::SEPARATOR), ' ');
+        s.pop_back();
+        file << endl << s;
+        file.close();
         return 0;
     }
 
@@ -85,8 +91,8 @@ private:
         while (file.peek() != EOF) {
             string s;
             getline(file, s);
-            replace(s.begin(), s.end(), ' ', char(Config::SEPARATOR));
             if (s.empty()) break;
+            replace(s.begin(), s.end(), ' ', char(Config::SEPARATOR));
             s.push_back(Config::SEPARATOR);
             Transaction t(s);
             transactions.emplace_back(t);

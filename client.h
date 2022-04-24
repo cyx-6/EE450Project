@@ -73,9 +73,9 @@ public:
         else {
             u.transfer(v, o);
             cout << o.getUserName1() + " successfully transferred " +
-                            to_string(o.getTransferAmount()) + " alicoins to" +
+                            to_string(o.getTransferAmount()) + " alicoins to " +
                             o.getUserName2() + ". The current balance of " +
-                            o.getUserName1() + " is :" + to_string(u.currentBalance()) +
+                            o.getUserName1() + " is: " + to_string(u.currentBalance()) +
                             " alicoins."
                  << endl;
         }

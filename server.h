@@ -38,20 +38,12 @@ private:
     unordered_map<uint16_t, string> clientNameMap;
     int maxSerialID;
 
-    static void sigchld_handler(int s) {
-        int saved_errno = errno;
-        while (waitpid(-1, nullptr, WNOHANG) > 0)
-            ;
-        errno = saved_errno;
-    }
-
     static int TCPListener(uint16_t serverPort) {
         int TCPSocket;
         sockaddr_in serverAddress = socketAddress(serverPort);
         int yes = 1;
         TCPSocket = socket(serverAddress.sin_family, SOCK_STREAM, 0);
         assert(TCPSocket != -1);
-        assert(setsockopt(TCPSocket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) != -1);
         auto *socketAddress = (sockaddr *) &serverAddress;
         int r = bind(TCPSocket, socketAddress, sizeof(serverAddress));
         if (r == -1) {
@@ -59,11 +51,6 @@ private:
             assert(false);
         }
         assert(listen(TCPSocket, 8) != -1);
-        struct sigaction sigAction {};
-        sigAction.sa_handler = sigchld_handler;// reap all dead processes
-        sigemptyset(&sigAction.sa_mask);
-        sigAction.sa_flags = SA_RESTART;
-        assert(sigaction(SIGCHLD, &sigAction, nullptr) != -1);
         return TCPSocket;
     }
 
@@ -108,7 +95,10 @@ private:
         }
         sort(transactions.begin(), transactions.end(), Transaction::comp);
         ofstream file(Config::TXLIST_FILE);
-        file << "Serial No.\tSender\tReceiver\tTransfer Amount" << endl;
+        file << "Serial No." << Config::SEPARATOR
+             << "Sender" << Config::SEPARATOR
+             << "Receiver" << Config::SEPARATOR
+             << "Transfer Amount" << endl;
         for (const Transaction &t: transactions)
             file << t.toString() << endl;
         file.close();
