@@ -1,6 +1,5 @@
 # EE450 Socket Programming Project
 
-------
 - Name: Yaxing Cai
 - USC ID: 9552812062
 
