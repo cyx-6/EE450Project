@@ -39,7 +39,7 @@ public:
                             to_string(u.currentBalance()) + " alicoins."
                  << endl;
         else
-            cout << "“Unable to proceed with the balance enquiry request as " + userName +
+            cout << "Unable to proceed with the balance enquiry request as " + userName +
                             " is not part of the network."
                  << endl;
     };

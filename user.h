@@ -31,6 +31,7 @@ public:
     }
 
     void merge(const User &u) {
+        assert(userName == u.userName);
         transactionNumber += u.transactionNumber;
         balance += u.balance;
     }
@@ -79,6 +80,12 @@ public:
         int d = t.getTransferAmount();
         return make_pair(User(0, t.getUserName1(), 1, -d),
                          User(0, t.getUserName2(), 1, d));
+    }
+
+    static pair<User, User> statistics(const Transaction &t) {
+        int d = t.getTransferAmount();
+        return make_pair(User(0, t.getUserName1(), 1, d),
+                         User(0, t.getUserName2(), 1, -d));
     }
 
 private:

@@ -177,19 +177,6 @@ private:
         return 0;
     }
 
-    int UDPInitialization(int UDPSocket) {
-        backendNameList.reserve(backendAddressList.size());
-        for (const sockaddr_in &backendAddress: backendAddressList) {
-            auto *address = (sockaddr *) &backendAddress;
-            Operation o;
-            UDPSendObject(UDPSocket, address,
-                          sizeof(backendAddress), o);
-            backendNameList.emplace_back(UDPReceiveString(UDPSocket));
-            maxSerialID = max(maxSerialID, UDPReceiveInt(UDPSocket));
-        }
-        return 0;
-    }
-
 public:
     explicit Server(const vector<uint16_t> &TCPPortList,
                     uint16_t UDPPort,

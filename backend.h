@@ -72,10 +72,25 @@ private:
         return 0;
     }
 
-    int stats(int backendSocket, sockaddr *serverAddress, socklen_t serverAddressSize) {
+    int stats(int backendSocket, sockaddr *serverAddress, socklen_t serverAddressSize, const Operation &o) {
+        unordered_map<string, User> m;
+        string userName = o.getUserName1();
+        for (const Transaction &t: transactions) {
+            string userName1 = t.getUserName1(), userName2 = t.getUserName2();
+            pair<User, User> p = User::statistics(t);
+            if (userName1 == userName) {
+                if (!m.count(userName2))
+                    m.insert(make_pair(userName2, User::initialUser(userName2)));
+                m.at(userName2).merge(p.second);
+            } else if (userName2 == userName) {
+                if (!m.count(userName1))
+                    m.insert(make_pair(userName1, User::initialUser(userName1)));
+                m.at(userName1).merge(p.first);
+            }
+        }
         vector<User> v;
-        v.reserve(users.size());
-        for (pair<string, User> p: users) v.emplace_back(p.second);
+        v.reserve(m.size());
+        for (pair<string, User> p: m) v.emplace_back(p.second);
         sort(v.begin(), v.end(), User::comp);
         UDPSendPrimitive(backendSocket, serverAddress,
                          serverAddressSize, v.size());
@@ -150,7 +165,7 @@ public:
                     TXList(backendSocket, serverAddress, serverAddressSize);
                     break;
                 case Operation::Type::STATS:
-                    stats(backendSocket, serverAddress, serverAddressSize);
+                    stats(backendSocket, serverAddress, serverAddressSize, o);
                     break;
                 default:
                     assert(false);
