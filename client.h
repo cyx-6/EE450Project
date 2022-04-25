@@ -95,10 +95,14 @@ public:
             User u = TCPReceiveObject<User>(clientSocket);
             users.emplace_back(u);
         }
-        cout << userName + " statistics are the following.:" << endl
-             << "Rank--Username--NumofTransacions--Total" << endl;
-        for (const User &u: users)
-            cout << u.toString() << endl;
+        if (n) {
+            cout << userName + " statistics are the following.:" << endl
+                 << "Rank--Username--NumofTransacions--Total" << endl;
+            for (const User &u: users)
+                cout << u.toString() << endl;
+        } else cout << "Unable to proceed with the statistics request as " + userName +
+                            " is not part of the network."
+                 << endl;
     };
 
     int start(int argc, char **argv) {
